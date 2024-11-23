@@ -3,7 +3,8 @@
 # NOTICE: This file is subject to the license agreement defined in file 'LICENSE', which is part of
 # this source code package.
 from kesslergame import KesslerController
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Any
+from immutabledict import immutabledict
 
 
 class TestController(KesslerController):
@@ -13,7 +14,7 @@ class TestController(KesslerController):
         """
         ...
 
-    def actions(self, ship_state: Dict, game_state: Dict) -> Tuple[float, float, bool, bool]:
+    def actions(self, ship_state: Dict[str, Any], game_state: immutabledict[Any, Any]) -> Tuple[float, float, bool, bool]:
         """
         Method processed each time step by this controller to determine what control actions to take
 
