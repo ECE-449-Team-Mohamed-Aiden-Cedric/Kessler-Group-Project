@@ -10,6 +10,8 @@ from test_controller import TestController
 from scott_dick_controller import ScottDickController
 from graphics_both import GraphicsBoth
 
+from typing import Any
+
 # Define game scenario
 my_test_scenario = Scenario(name='Test Scenario',
                             num_asteroids=10,
@@ -23,7 +25,7 @@ my_test_scenario = Scenario(name='Test Scenario',
                             stop_if_no_ammo=False)
 
 # Define Game Settings
-game_settings = {'perf_tracker': True,
+game_settings: dict[str, Any] = {'perf_tracker': True,
                  'graphics_type': GraphicsType.Tkinter,
                  'realtime_multiplier': 1,
                  'graphics_obj': None,
@@ -33,7 +35,7 @@ game = KesslerGame(settings=game_settings)  # Use this to visualize the game sce
 # game = TrainerEnvironment(settings=game_settings)  # Use this for max-speed, no-graphics simulation
 
 # Evaluate the game
-pre = time.perf_counter()
+pre: float = time.perf_counter()
 score, perf_data = game.run(scenario=my_test_scenario, controllers=[ScottDickController()])
 
 # Print out some general info about the result
