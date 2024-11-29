@@ -44,9 +44,12 @@ pre: float = time.perf_counter()
 score, perf_data = game.run(scenario=my_test_scenario, controllers=[TeamCAMController()])
 
 # Print out some general info about the result
-print('Scenario eval time: '+str(time.perf_counter()-pre))
-print(score.stop_reason)
-print('Asteroids hit: ' + str([team.asteroids_hit for team in score.teams]))
-print('Deaths: ' + str([team.deaths for team in score.teams]))
-print('Accuracy: ' + str([team.accuracy for team in score.teams]))
-print('Mean eval time: ' + str([team.mean_eval_time for team in score.teams]))
+print('Scenario eval time: {:.2f} seconds'.format(time.perf_counter()-pre))
+print(f'Reason for end of evaluation: {score.stop_reason}')
+print(f'Asteroids hit: {score.teams[0].asteroids_hit}')
+print(f'Deaths: {score.teams[0].deaths}')
+print('Accuracy: {:.2f}%'.format(score.teams[0].accuracy*100))
+print('Mean eval time: {:.1f} milliseconds'.format(score.teams[0].mean_eval_time*1000))
+print('Mean eval time as percentage of lag-free maximum: {:.1f}%'.format(
+    score.teams[0].mean_eval_time / (1/game_settings['frequency']) * 100
+))
