@@ -15,6 +15,7 @@ from skfuzzy import control as ctrl
 import math
 import numpy as np
 import config as config
+from logger import Logger
 
 Gene = dict[str, tuple[float, float, float]]
 Chromosome = list[Gene] # MUST be a list due to implementation of EasyGA
@@ -23,6 +24,8 @@ ConvertedChromosome = dict[str, Gene]
 class TeamCAMController(KesslerController): 
     def __init__(self):
         self.__current_frame = 0
+        
+        self.__logger: Logger = Logger(config.LOG_FILE_PATH)
 
         bullet_time: ctrl.Antecedent
         theta_delta: ctrl.Antecedent
@@ -240,7 +243,11 @@ class TeamCAMController(KesslerController):
         self.__current_frame +=1
 
         #DEBUG
-        print(thrust, bullet_t, shooting_theta, turn_rate, fire)
+        self.__logger.log(
+            "Simulation Results\n\tThrust: {:d}\n\tBullet Time: {:.3f}\n\tShooting Theta: {:.3f}\n\tTurn Rate: {:.2f}\n\tFire: {}".format(
+                thrust, bullet_t, shooting_theta, turn_rate, fire
+            )
+        )
 
         return thrust, turn_rate, fire, drop_mine
 
