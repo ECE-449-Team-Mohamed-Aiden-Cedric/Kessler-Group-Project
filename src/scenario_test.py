@@ -7,7 +7,7 @@ import time
 
 from kesslergame import Scenario, KesslerGame, GraphicsType
 from test_controller import TestController
-from scott_dick_controller import ScottDickController
+from team_cam_controller import ScottDickController
 from graphics_both import GraphicsBoth
 
 from typing import Any
