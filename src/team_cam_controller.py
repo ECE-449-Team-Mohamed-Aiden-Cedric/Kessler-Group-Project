@@ -22,7 +22,7 @@ Chromosome = list[Gene] # MUST be a list due to implementation of EasyGA
 ConvertedChromosome = dict[str, Gene]
 
 class TeamCAMController(KesslerController): 
-    def __init__(self):
+    def __init__(self, chromosome: Chromosome):
         self.__current_frame = 0
         
         self.__logger: Logger = Logger(config.LOG_FILE_PATH)
@@ -32,7 +32,7 @@ class TeamCAMController(KesslerController):
         ship_turn: ctrl.Consequent
         ship_fire: ctrl.Consequent
 
-        bullet_time, theta_delta, ship_turn, ship_fire= self.__setup_fuzzy_sets([])
+        bullet_time, theta_delta, ship_turn, ship_fire= self.__setup_fuzzy_sets(chromosome)
         self.__rules: list[ctrl.Rule] = self.__get_rules(bullet_time, theta_delta, ship_turn, ship_fire)
 
         targeting_control = ctrl.ControlSystem(self.__rules)
