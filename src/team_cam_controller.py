@@ -14,6 +14,7 @@ import skfuzzy as fuzz
 from skfuzzy import control as ctrl
 import math
 import numpy as np
+import config
 
 Gene = dict[str, tuple[float, float, float]]
 Chromosome = list[Gene] # MUST be a list due to implementation of EasyGA
@@ -31,8 +32,12 @@ class TeamCAMController(KesslerController):
         bullet_time, theta_delta, ship_turn, ship_fire= self.__setup_fuzzy_sets([])
         self.__rules: list[ctrl.Rule] = self.__get_rules(bullet_time, theta_delta, ship_turn, ship_fire)
 
-        # Declare the fuzzy controller, add the rules 
-        self.__targeting_control = ctrl.ControlSystem(self.__rules)
+        targeting_control = ctrl.ControlSystem(self.__rules)
+        self.__control_system_simulation = ctrl.ControlSystemSimulation(
+            targeting_control,
+            cache=config.USE_SIMULATION_CACHE,
+            flush_after_run=config.FLUSH_SIMULATION_CACHE_AFTER_RUN
+        )
 
     @staticmethod
     def __setup_fuzzy_sets(chromosome: Chromosome) -> tuple[ctrl.Antecedent, ctrl.Antecedent, ctrl.Consequent, ctrl.Consequent]:
@@ -119,7 +124,7 @@ class TeamCAMController(KesslerController):
         """
         Method processed each time step by this controller.
         """
-        # These were the constant actions in the basic demo, just spinning and shooting.
+        # These were the constant actions in the basic demo, just spinning and self.__control_system_simulation.
         #thrust = 0 <- How do the values scale with asteroid velocity vector?
         #turn_rate = 90 <- How do the values scale with asteroid velocity vector?
 
@@ -211,17 +216,15 @@ class TeamCAMController(KesslerController):
         shooting_theta: float = (shooting_theta + math.pi) % (2 * math.pi) - math.pi
 
         # Pass the inputs to the rulebase and fire it
-        shooting = ctrl.ControlSystemSimulation(self.__targeting_control,flush_after_run=1)
+        self.__control_system_simulation.input['bullet_time'] = bullet_t
+        self.__control_system_simulation.input['theta_delta'] = shooting_theta
 
-        shooting.input['bullet_time'] = bullet_t
-        shooting.input['theta_delta'] = shooting_theta
-
-        shooting.compute()
+        self.__control_system_simulation.compute()
 
         # Get the defuzzified outputs
-        turn_rate: float = shooting.output['ship_turn']
+        turn_rate: float = self.__control_system_simulation.output['ship_turn']
 
-        if shooting.output['ship_fire'] >= 0:
+        if self.__control_system_simulation.output['ship_fire'] >= 0:
             fire = True
         else:
             fire = False
