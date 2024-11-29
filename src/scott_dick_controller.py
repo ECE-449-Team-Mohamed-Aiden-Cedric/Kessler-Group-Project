@@ -1,7 +1,8 @@
 # ECE 449 Intelligent Systems Engineering
 # Fall 2023
 # Dr. Scott Dick
-from pickle import FALSE
+from typing import Dict, Tuple, Any
+from immutabledict import immutabledict
 
 # Demonstration of a fuzzy tree-based controller for Kessler Game.
 # Please see the Kessler Game Development Guide by Dr. Scott Dick for a
@@ -9,19 +10,17 @@ from pickle import FALSE
 
 from kesslergame import KesslerController # In Eclipse, the name of the library is kesslergame, not src.kesslergame
 from typing import Dict, Tuple
-from cmath import sqrt
 import skfuzzy as fuzz
 from skfuzzy import control as ctrl
 import math
 import numpy as np
-import matplotlib as plt
 
 class ScottDickController(KesslerController):
     
     
         
     def __init__(self):
-        self.eval_frames = 0 #What is this?
+        self.eval_frames = 0 # the current frame
 
         # self.targeting_control is the targeting rulebase, which is static in this controller.      
         # Declare variables
@@ -616,62 +615,38 @@ class ScottDickController(KesslerController):
         ship_fire['Y'] = fuzz.trimf(ship_fire.universe, [0.0,1,1]) 
                 
         #Declare each fuzzy rule
-        rule1 = ctrl.Rule(bullet_time['L'] & theta_delta['NL'], (ship_turn['NL'], ship_fire['N']))
-        rule2 = ctrl.Rule(bullet_time['L'] & theta_delta['NM'], (ship_turn['NM'], ship_fire['N']))
-        rule3 = ctrl.Rule(bullet_time['L'] & theta_delta['NS'], (ship_turn['NS'], ship_fire['Y']))
-        rule4 = ctrl.Rule(bullet_time['L'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y']))
-        rule5 = ctrl.Rule(bullet_time['L'] & theta_delta['PS'], (ship_turn['PS'], ship_fire['Y']))
-        rule6 = ctrl.Rule(bullet_time['L'] & theta_delta['PM'], (ship_turn['PM'], ship_fire['N']))
-        rule7 = ctrl.Rule(bullet_time['L'] & theta_delta['PL'], (ship_turn['PL'], ship_fire['N']))
-        rule8 = ctrl.Rule(bullet_time['M'] & theta_delta['NL'], (ship_turn['NL'], ship_fire['N']))
-        rule9 = ctrl.Rule(bullet_time['M'] & theta_delta['NM'], (ship_turn['NM'], ship_fire['N']))
-        rule10 = ctrl.Rule(bullet_time['M'] & theta_delta['NS'], (ship_turn['NS'], ship_fire['Y']))
-        rule11 = ctrl.Rule(bullet_time['M'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y']))
-        rule12 = ctrl.Rule(bullet_time['M'] & theta_delta['PS'], (ship_turn['PS'], ship_fire['Y']))
-        rule13 = ctrl.Rule(bullet_time['M'] & theta_delta['PM'], (ship_turn['PM'], ship_fire['N']))
-        rule14 = ctrl.Rule(bullet_time['M'] & theta_delta['PL'], (ship_turn['PL'], ship_fire['N']))
-        rule15 = ctrl.Rule(bullet_time['S'] & theta_delta['NL'], (ship_turn['NL'], ship_fire['Y']))
-        rule16 = ctrl.Rule(bullet_time['S'] & theta_delta['NM'], (ship_turn['NM'], ship_fire['Y']))
-        rule17 = ctrl.Rule(bullet_time['S'] & theta_delta['NS'], (ship_turn['NS'], ship_fire['Y']))
-        rule18 = ctrl.Rule(bullet_time['S'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y']))
-        rule19 = ctrl.Rule(bullet_time['S'] & theta_delta['PS'], (ship_turn['PS'], ship_fire['Y']))
-        rule20 = ctrl.Rule(bullet_time['S'] & theta_delta['PM'], (ship_turn['PM'], ship_fire['Y']))
-        rule21 = ctrl.Rule(bullet_time['S'] & theta_delta['PL'], (ship_turn['PL'], ship_fire['Y']))
+        rules: list[ctrl.Rule] = [
+            ctrl.Rule(bullet_time['L'] & theta_delta['NL'], (ship_turn['NL'], ship_fire['N'])),
+            ctrl.Rule(bullet_time['L'] & theta_delta['NM'], (ship_turn['NM'], ship_fire['N'])),
+            ctrl.Rule(bullet_time['L'] & theta_delta['NS'], (ship_turn['NS'], ship_fire['Y'])),
+            #ctrl.Rule(bullet_time['L'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y'])),
+            ctrl.Rule(bullet_time['L'] & theta_delta['PS'], (ship_turn['PS'], ship_fire['Y'])),
+            ctrl.Rule(bullet_time['L'] & theta_delta['PM'], (ship_turn['PM'], ship_fire['N'])),
+            ctrl.Rule(bullet_time['L'] & theta_delta['PL'], (ship_turn['PL'], ship_fire['N'])),
+            ctrl.Rule(bullet_time['M'] & theta_delta['NL'], (ship_turn['NL'], ship_fire['N'])),
+            ctrl.Rule(bullet_time['M'] & theta_delta['NM'], (ship_turn['NM'], ship_fire['N'])),
+            ctrl.Rule(bullet_time['M'] & theta_delta['NS'], (ship_turn['NS'], ship_fire['Y'])),
+            #ctrl.Rule(bullet_time['M'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y'])),
+            ctrl.Rule(bullet_time['M'] & theta_delta['PS'], (ship_turn['PS'], ship_fire['Y'])),
+            ctrl.Rule(bullet_time['M'] & theta_delta['PM'], (ship_turn['PM'], ship_fire['N'])),
+            ctrl.Rule(bullet_time['M'] & theta_delta['PL'], (ship_turn['PL'], ship_fire['N'])),
+            ctrl.Rule(bullet_time['S'] & theta_delta['NL'], (ship_turn['NL'], ship_fire['Y'])),
+            ctrl.Rule(bullet_time['S'] & theta_delta['NM'], (ship_turn['NM'], ship_fire['Y'])),
+            ctrl.Rule(bullet_time['S'] & theta_delta['NS'], (ship_turn['NS'], ship_fire['Y'])),
+            #ctrl.Rule(bullet_time['S'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y'])),
+            ctrl.Rule(bullet_time['S'] & theta_delta['PS'], (ship_turn['PS'], ship_fire['Y'])),
+            ctrl.Rule(bullet_time['S'] & theta_delta['PM'], (ship_turn['PM'], ship_fire['Y'])),
+            ctrl.Rule(bullet_time['S'] & theta_delta['PL'], (ship_turn['PL'], ship_fire['Y']))
+        ]
      
         #DEBUG
         #bullet_time.view()
         #theta_delta.view()
         #ship_turn.view()
         #ship_fire.view()
-     
-     
-        
+ 
         # Declare the fuzzy controller, add the rules 
-        # This is an instance variable, and thus available for other methods in the same object. See notes.                         
-        # self.targeting_control = ctrl.ControlSystem([rule1, rule2, rule3, rule4, rule5, rule6, rule7, rule8, rule9, rule10, rule11, rule12, rule13, rule14, rule15])
-             
-        self.targeting_control = ctrl.ControlSystem()
-        self.targeting_control.addrule(rule1)
-        self.targeting_control.addrule(rule2)
-        self.targeting_control.addrule(rule3)
-        self.targeting_control.addrule(rule4)
-        self.targeting_control.addrule(rule5)
-        self.targeting_control.addrule(rule6)
-        self.targeting_control.addrule(rule7)
-        self.targeting_control.addrule(rule8)
-        self.targeting_control.addrule(rule9)
-        self.targeting_control.addrule(rule10)
-        self.targeting_control.addrule(rule11)
-        self.targeting_control.addrule(rule12)
-        self.targeting_control.addrule(rule13)
-        self.targeting_control.addrule(rule14)
-        self.targeting_control.addrule(rule15)
-        self.targeting_control.addrule(rule16)
-        self.targeting_control.addrule(rule17)
-        self.targeting_control.addrule(rule18)
-        self.targeting_control.addrule(rule19)
-        self.targeting_control.addrule(rule20)
-        self.targeting_control.addrule(rule21)
+        self.targeting_control = ctrl.ControlSystem(rules)
         
     
     
@@ -746,6 +721,7 @@ class ScottDickController(KesslerController):
                     closest_asteroid["dist"] = curr_dist
 
         # closest_asteroid is now the nearest asteroid object. 
+        assert (closest_asteroid is not None)
         # Calculate intercept time given ship & asteroid position, asteroid velocity vector, bullet speed (not direction).
         # Based on Law of Cosines calculation, see notes.
         
@@ -808,7 +784,7 @@ class ScottDickController(KesslerController):
         shooting.compute()
         
         # Get the defuzzified outputs
-        turn_rate = shooting.output['ship_turn']
+        turn_rate: float = shooting.output['ship_turn']
         
         if shooting.output['ship_fire'] >= 0:
             fire = True
