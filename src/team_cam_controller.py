@@ -15,13 +15,35 @@ from skfuzzy import control as ctrl
 import math
 import numpy as np
 
+Gene = dict[str, tuple[float, float, float]]
+Chromosome = list[Gene] # MUST be a list due to implementation of EasyGA
+ConvertedChromosome = dict[str, Gene]
 
 class TeamCAMController(KesslerController): 
     def __init__(self):
-        self.eval_frames = 0 # the current frame
+        self.__current_frame = 0
 
-        # self.targeting_control is the targeting rulebase, which is static in this controller.      
-        # Declare variables
+        bullet_time: ctrl.Antecedent
+        theta_delta: ctrl.Antecedent
+        ship_turn: ctrl.Consequent
+        ship_fire: ctrl.Consequent
+
+        bullet_time, theta_delta, ship_turn, ship_fire= self.__setup_fuzzy_sets([])
+        self.__rules: list[ctrl.Rule] = self.__get_rules(bullet_time, theta_delta, ship_turn, ship_fire)
+
+        # Declare the fuzzy controller, add the rules 
+        self.__targeting_control = ctrl.ControlSystem(self.__rules)
+
+    @staticmethod
+    def __setup_fuzzy_sets(chromosome: Chromosome) -> tuple[ctrl.Antecedent, ctrl.Antecedent, ctrl.Consequent, ctrl.Consequent]:
+        """sets up the fuzzy sets with the genes defined in the Chromosome
+
+        Args:
+            chromosome (Chromosome): contains the genes with which to setup the fuzzy sets
+
+        Returns:
+            tuple[ctrl.Antecedent, ctrl.Antecedent, ctrl.Consequent, ctrl.Consequent]: bullet_time, theta_delta, ship_turn, ship_fire
+        """
         bullet_time: ctrl.Antecedent = ctrl.Antecedent(np.arange(0,1.0,0.002), 'bullet_time')
         theta_delta: ctrl.Antecedent = ctrl.Antecedent(np.arange(-1*math.pi/30,math.pi/30,0.1), 'theta_delta') # Radians due to Python
         ship_turn: ctrl.Consequent = ctrl.Consequent(np.arange(-180,180,1), 'ship_turn') # Degrees due to Kessler
@@ -55,19 +77,9 @@ class TeamCAMController(KesslerController):
         #Declare singleton fuzzy sets for the ship_fire consequent; -1 -> don't fire, +1 -> fire; this will be  thresholded
         #   and returned as the boolean 'fire'
         ship_fire['N'] = fuzz.trimf(ship_fire.universe, [-1,-1,0.0])
-        ship_fire['Y'] = fuzz.trimf(ship_fire.universe, [0.0,1,1]) 
+        ship_fire['Y'] = fuzz.trimf(ship_fire.universe, [0.0,1,1])
 
-        #Declare each fuzzy rule
-        self.__rules: list[ctrl.Rule] = self.__get_rules(bullet_time, theta_delta, ship_turn, ship_fire)
-
-        #DEBUG
-        #bullet_time.view()
-        #theta_delta.view()
-        #ship_turn.view()
-        #ship_fire.view()
-
-        # Declare the fuzzy controller, add the rules 
-        self.__targeting_control = ctrl.ControlSystem(self.__rules)
+        return (bullet_time, theta_delta, ship_turn, ship_fire)
 
     @staticmethod
     def __get_rules(
@@ -222,7 +234,7 @@ class TeamCAMController(KesslerController):
 
         drop_mine = False
 
-        self.eval_frames +=1
+        self.__current_frame +=1
 
         #DEBUG
         print(thrust, bullet_t, shooting_theta, turn_rate, fire)
