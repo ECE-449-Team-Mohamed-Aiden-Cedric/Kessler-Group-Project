@@ -16,7 +16,7 @@ import math
 import numpy as np
 
 
-class ScottDickController(KesslerController): 
+class TeamCAMController(KesslerController): 
     def __init__(self):
         self.eval_frames = 0 # the current frame
 
