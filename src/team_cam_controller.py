@@ -22,10 +22,10 @@ class TeamCAMController(KesslerController):
 
         # self.targeting_control is the targeting rulebase, which is static in this controller.      
         # Declare variables
-        bullet_time = ctrl.Antecedent(np.arange(0,1.0,0.002), 'bullet_time')
-        theta_delta = ctrl.Antecedent(np.arange(-1*math.pi/30,math.pi/30,0.1), 'theta_delta') # Radians due to Python
-        ship_turn = ctrl.Consequent(np.arange(-180,180,1), 'ship_turn') # Degrees due to Kessler
-        ship_fire = ctrl.Consequent(np.arange(-1,1,0.1), 'ship_fire')
+        bullet_time: ctrl.Antecedent = ctrl.Antecedent(np.arange(0,1.0,0.002), 'bullet_time')
+        theta_delta: ctrl.Antecedent = ctrl.Antecedent(np.arange(-1*math.pi/30,math.pi/30,0.1), 'theta_delta') # Radians due to Python
+        ship_turn: ctrl.Consequent = ctrl.Consequent(np.arange(-180,180,1), 'ship_turn') # Degrees due to Kessler
+        ship_fire: ctrl.Consequent = ctrl.Consequent(np.arange(-1,1,0.1), 'ship_fire')
 
         #Declare fuzzy sets for bullet_time (how long it takes for the bullet to reach the intercept point)
         bullet_time['S'] = fuzz.trimf(bullet_time.universe,[0,0,0.05])
@@ -58,6 +58,25 @@ class TeamCAMController(KesslerController):
         ship_fire['Y'] = fuzz.trimf(ship_fire.universe, [0.0,1,1]) 
 
         #Declare each fuzzy rule
+        self.__rules: list[ctrl.Rule] = self.__get_rules(bullet_time, theta_delta, ship_turn, ship_fire)
+
+        #DEBUG
+        #bullet_time.view()
+        #theta_delta.view()
+        #ship_turn.view()
+        #ship_fire.view()
+
+        # Declare the fuzzy controller, add the rules 
+        self.__targeting_control = ctrl.ControlSystem(self.__rules)
+
+    @staticmethod
+    def __get_rules(
+            bullet_time: ctrl.Antecedent,
+            theta_delta: ctrl.Antecedent,
+            ship_turn: ctrl.Consequent,
+            ship_fire: ctrl.Consequent
+        ) -> list[ctrl.Rule]:
+
         rules: list[ctrl.Rule] = [
             ctrl.Rule(bullet_time['L'] & theta_delta['NL'], (ship_turn['NL'], ship_fire['N'])),
             ctrl.Rule(bullet_time['L'] & theta_delta['NM'], (ship_turn['NM'], ship_fire['N'])),
@@ -82,14 +101,7 @@ class TeamCAMController(KesslerController):
             ctrl.Rule(bullet_time['S'] & theta_delta['PL'], (ship_turn['PL'], ship_fire['Y']))
         ]
 
-        #DEBUG
-        #bullet_time.view()
-        #theta_delta.view()
-        #ship_turn.view()
-        #ship_fire.view()
-
-        # Declare the fuzzy controller, add the rules 
-        self.targeting_control = ctrl.ControlSystem(rules)
+        return rules
 
     def actions(self, ship_state: Dict[str, Any], game_state: immutabledict[Any, Any]) -> Tuple[float, float, bool, bool]:
         """
@@ -187,7 +199,7 @@ class TeamCAMController(KesslerController):
         shooting_theta: float = (shooting_theta + math.pi) % (2 * math.pi) - math.pi
 
         # Pass the inputs to the rulebase and fire it
-        shooting = ctrl.ControlSystemSimulation(self.targeting_control,flush_after_run=1)
+        shooting = ctrl.ControlSystemSimulation(self.__targeting_control,flush_after_run=1)
 
         shooting.input['bullet_time'] = bullet_t
         shooting.input['theta_delta'] = shooting_theta
