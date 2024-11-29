@@ -9,7 +9,7 @@ from kesslergame import Scenario, KesslerGame, GraphicsType, TrainerEnvironment
 from test_controller import TestController
 from team_cam_controller import TeamCAMController
 from graphics_both import GraphicsBoth
-import config
+import config as config
 
 from typing import Any
 

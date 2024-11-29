@@ -14,7 +14,7 @@ import skfuzzy as fuzz
 from skfuzzy import control as ctrl
 import math
 import numpy as np
-import config
+import config as config
 
 Gene = dict[str, tuple[float, float, float]]
 Chromosome = list[Gene] # MUST be a list due to implementation of EasyGA
