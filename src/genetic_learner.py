@@ -99,6 +99,8 @@ def fitness(ga_instance: pygad.GA, chromosome: Chromosome, solution_idx: int) ->
 
     print(f"iteration fitness: {final_fitness_score}")
 
+    ga_instance.save(config.GA_MODEL_FILE)
+
     return final_fitness_score
 
 def on_generation(ga_instance: pygad.GA):
