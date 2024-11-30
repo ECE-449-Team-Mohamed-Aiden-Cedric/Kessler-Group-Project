@@ -1,4 +1,3 @@
-import random
 from kesslergame.score import Score
 from kesslergame.kessler_game import KesslerGame
 from kesslergame.scenario import Scenario
@@ -87,8 +86,12 @@ def fitness(ga_instance: pygad.GA, chromosome: Chromosome, solution_idx: int) ->
         "graphics_obj": None,
         "frequency": 30
     }
-    
-    game: KesslerGame = TrainerEnvironment(settings = game_settings)
+
+    game: KesslerGame
+    if config.RUN_WITH_GRAPHICS:
+        game = KesslerGame(settings = game_settings)
+    else:
+        game = TrainerEnvironment(settings = game_settings)
 
     score: Team = execute_fuzzy_inference(game, scenario, controller)
 
@@ -113,7 +116,7 @@ def run_genetic_algorithm():
         mutation_num_genes=config.GA_NUMBER_OF_GENES_TO_MUTATE,
         gene_type=float,
         gene_space={"low": 0, "high": 1},
-        parallel_processing=["process", config.GA_NUMBER_OF_THREADS]
+        #parallel_processing=["process", config.GA_NUMBER_OF_THREADS]
     )
 
     ga_instance.run()
