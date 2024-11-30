@@ -13,9 +13,7 @@ from typing import Any
 
 import pygad
 
-Gene = dict[str, tuple[float, float, float]]
-Chromosome = list[float] # due to implementation of pygad
-ConvertedChromosome = dict[str, Gene]
+from chromosome import Chromosome
 
 def execute_fuzzy_inference(
     kessler_game: KesslerGame,
