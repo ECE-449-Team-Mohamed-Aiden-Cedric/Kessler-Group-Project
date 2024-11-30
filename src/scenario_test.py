@@ -5,10 +5,11 @@
 
 import time
 
-from kesslergame import Scenario, KesslerGame, GraphicsType
+from kesslergame import Scenario, KesslerGame, GraphicsType, TrainerEnvironment
 from test_controller import TestController
-from scott_dick_controller import ScottDickController
+from team_cam_controller import TeamCAMController
 from graphics_both import GraphicsBoth
+import config as config
 
 from typing import Any
 
@@ -25,23 +26,30 @@ my_test_scenario = Scenario(name='Test Scenario',
                             stop_if_no_ammo=False)
 
 # Define Game Settings
-game_settings: dict[str, Any] = {'perf_tracker': True,
-                 'graphics_type': GraphicsType.Tkinter,
-                 'realtime_multiplier': 1,
-                 'graphics_obj': None,
-                 'frequency': 30}
+game_settings: dict[str, Any] = {
+    'perf_tracker': True,
+    'graphics_type': GraphicsType.Tkinter,
+    'realtime_multiplier': 1,
+    'graphics_obj': None,
+    'frequency': 30
+}
 
-game = KesslerGame(settings=game_settings)  # Use this to visualize the game scenario
-# game = TrainerEnvironment(settings=game_settings)  # Use this for max-speed, no-graphics simulation
+if (config.RUN_WITH_GRAPHICS):
+    game = KesslerGame(settings=game_settings)  # Use this to visualize the game scenario
+else:
+    game = TrainerEnvironment(settings=game_settings)  # Use this for max-speed, no-graphics simulation
 
 # Evaluate the game
 pre: float = time.perf_counter()
-score, perf_data = game.run(scenario=my_test_scenario, controllers=[ScottDickController()])
+score, perf_data = game.run(scenario=my_test_scenario, controllers=[TeamCAMController()])
 
 # Print out some general info about the result
-print('Scenario eval time: '+str(time.perf_counter()-pre))
-print(score.stop_reason)
-print('Asteroids hit: ' + str([team.asteroids_hit for team in score.teams]))
-print('Deaths: ' + str([team.deaths for team in score.teams]))
-print('Accuracy: ' + str([team.accuracy for team in score.teams]))
-print('Mean eval time: ' + str([team.mean_eval_time for team in score.teams]))
+print('Scenario eval time: {:.2f} seconds'.format(time.perf_counter()-pre))
+print(f'Reason for end of evaluation: {score.stop_reason}')
+print(f'Asteroids hit: {score.teams[0].asteroids_hit}')
+print(f'Deaths: {score.teams[0].deaths}')
+print('Accuracy: {:.2f}%'.format(score.teams[0].accuracy*100))
+print('Mean eval time: {:.1f} milliseconds'.format(score.teams[0].mean_eval_time*1000))
+print('Mean eval time as percentage of lag-free maximum: {:.1f}%'.format(
+    score.teams[0].mean_eval_time / (1/game_settings['frequency']) * 100
+))
