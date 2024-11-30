@@ -5,6 +5,10 @@ RUN_WITH_GRAPHICS: bool = True
 USE_SIMULATION_CACHE: bool = True # default is True
 FLUSH_SIMULATION_CACHE_AFTER_RUN: int = 1000 # default is 1000
 
+SEED: int = 42069
+
+# fitness of unoptimized Dr. Dick model on seed 42069: 40.91447368421052
+
 GA_POPULATION_SIZE: int = 42
 GA_GENERATION_GOAL: int = 100
 GA_FITNESS_GOAL: float = 1

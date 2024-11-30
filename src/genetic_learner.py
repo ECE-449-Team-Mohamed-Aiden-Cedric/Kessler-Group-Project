@@ -94,7 +94,8 @@ def fitness(ga_instance: pygad.GA, chromosome: Chromosome, solution_idx: int) ->
         map_size = (1000, 800),
         time_limit = 60,
         ammo_limit_multiplier = 0,
-        stop_if_no_ammo = False
+        stop_if_no_ammo = False,
+        seed = config.SEED
     )
 
     game_settings: dict[str, Any] = {
@@ -104,6 +105,7 @@ def fitness(ga_instance: pygad.GA, chromosome: Chromosome, solution_idx: int) ->
         "graphics_obj": None,
         "frequency": 30
     }
+    
     game: KesslerGame = TrainerEnvironment(settings = game_settings)
 
     score: Team = execute_fuzzy_inference(game, scenario, controller)
