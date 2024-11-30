@@ -14,7 +14,7 @@ from typing import Any
 import pygad
 
 Gene = dict[str, tuple[float, float, float]]
-Chromosome = list[Gene] # MUST be a list due to implementation of EasyGA
+Chromosome = list[float] # MUST be a list due to implementation of pygad
 ConvertedChromosome = dict[str, Gene]
 
 def gene_generation() -> Gene:
@@ -118,7 +118,7 @@ def fitness(ga_instance: pygad.GA, chromosome: Chromosome, solution_idx: int) ->
 
 def on_generation(ga_instance: pygad.GA):
     print("Generation: {:d}".format(ga_instance.generations_completed))
-    print("Fitness of best solution: {:.2f}".format(ga_instance.best_solution()[-1]))
+    print("Fitness of best solution: {:.2f}".format(ga_instance.best_solution(ga_instance.last_generation_fitness)[1]))
 
 def run_genetic_algorithm():
     ga_instance: pygad.GA = pygad.GA(
@@ -128,7 +128,10 @@ def run_genetic_algorithm():
         sol_per_pop=config.GA_POPULATION_SIZE,
         num_genes=config.GA_CHROMOSOME_LENGTH,
         on_generation=on_generation,
-        mutation_num_genes=config.GA_NUMBER_OF_GENES_TO_MUTATE
+        mutation_num_genes=config.GA_NUMBER_OF_GENES_TO_MUTATE,
+        gene_type=float,
+        gene_space={"low": 0, "high": 1},
+        parallel_processing=["process", config.GA_NUMBER_OF_THREADS]
     )
 
     ga_instance.run()
