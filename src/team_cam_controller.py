@@ -17,9 +17,7 @@ import numpy as np
 import config as config
 from logger import Logger
 
-Gene = dict[str, tuple[float, float, float]]
-Chromosome = list[Gene] # MUST be a list due to implementation of EasyGA
-ConvertedChromosome = dict[str, Gene]
+from genetic_learner import Gene, Chromosome, ConvertedChromosome
 
 class TeamCAMController(KesslerController): 
     def __init__(self, chromosome: Chromosome):
@@ -32,7 +30,9 @@ class TeamCAMController(KesslerController):
         ship_turn: ctrl.Consequent
         ship_fire: ctrl.Consequent
 
-        bullet_time, theta_delta, ship_turn, ship_fire= self.__setup_fuzzy_sets(chromosome)
+        converted_chromosome: ConvertedChromosome = self.__convert_chromosome(chromosome)
+
+        bullet_time, theta_delta, ship_turn, ship_fire= self.__setup_fuzzy_sets(converted_chromosome)
         self.__rules: list[ctrl.Rule] = self.__get_rules(bullet_time, theta_delta, ship_turn, ship_fire)
 
         targeting_control = ctrl.ControlSystem(self.__rules)
@@ -43,7 +43,70 @@ class TeamCAMController(KesslerController):
         )
 
     @staticmethod
-    def __setup_fuzzy_sets(chromosome: Chromosome) -> tuple[ctrl.Antecedent, ctrl.Antecedent, ctrl.Consequent, ctrl.Consequent]:
+    def __convert_chromosome(chromosome: Chromosome) -> ConvertedChromosome:
+        """converts a list of floats into something usable by setup_fuzzy_sets
+
+        Args:
+            chromosome (Chromosome): a list of floats
+
+        Returns:
+            ConvertedChromosome: something in a format usable in trimf functions
+        """
+        # bullet time
+        values: list[float] = chromosome[0:3]
+        values.extend([-0.01, 1.01])
+        values = sorted(values)
+        bullet_time_gene: Gene = { # type: ignore
+            "S": tuple(values[0:3]),
+            "M": tuple(values[1:4]),
+            "L": tuple(values[2:5])
+        }
+
+        values: list[float] = chromosome[3:10]
+        values.extend([-0.01, 1.01])
+        values = sorted(values)
+        theta_delta_gene: Gene = { # type: ignore
+            "NL": tuple(values[0:3]),
+            "NM": tuple(values[1:4]),
+            "NS": tuple(values[2:5]),
+            "Z": tuple(values[3:6]),
+            "PS": tuple(values[4:7]),
+            "PM": tuple(values[5:8]),
+            "PL": tuple(values[6:9])
+        }
+
+        values: list[float] = chromosome[10:17]
+        values.extend([-0.01, 1.01])
+        values = sorted(values)
+        ship_turn_gene: Gene = { # type: ignore
+            "NL": tuple(values[0:3]),
+            "NM": tuple(values[1:4]),
+            "NS": tuple(values[2:5]),
+            "Z": tuple(values[3:6]),
+            "PS": tuple(values[4:7]),
+            "PM": tuple(values[5:8]),
+            "PL": tuple(values[6:9])
+        }
+
+        values: list[float] = chromosome[17:19]
+        values.extend([-0.01, 1.01])
+        values = sorted(values)
+        ship_fire_gene: Gene = { # type: ignore
+            "Y": tuple(values[0:3]),
+            "N": tuple(values[1:4])
+        }
+
+        converted_chromosome: ConvertedChromosome = {
+            "bullet_time": bullet_time_gene,
+            "theta_delta": theta_delta_gene,
+            "ship_turn": ship_turn_gene,
+            "ship_fire": ship_fire_gene
+        }
+
+        return converted_chromosome
+
+    @staticmethod
+    def __setup_fuzzy_sets(chromosome: ConvertedChromosome) -> tuple[ctrl.Antecedent, ctrl.Antecedent, ctrl.Consequent, ctrl.Consequent]:
         """sets up the fuzzy sets with the genes defined in the Chromosome
 
         Args:
@@ -67,7 +130,7 @@ class TeamCAMController(KesslerController):
         theta_delta['NL'] = fuzz.zmf(theta_delta.universe, -1*math.pi/30,-2*math.pi/90)
         theta_delta['NM'] = fuzz.trimf(theta_delta.universe, [-1*math.pi/30, -2*math.pi/90, -1*math.pi/90])
         theta_delta['NS'] = fuzz.trimf(theta_delta.universe, [-2*math.pi/90,-1*math.pi/90,math.pi/90])
-        # theta_delta['Z'] = fuzz.trimf(theta_delta.universe, [-1*math.pi/90,0,math.pi/90])
+        theta_delta['Z'] = fuzz.trimf(theta_delta.universe, [-1*math.pi/90,0,math.pi/90])
         theta_delta['PS'] = fuzz.trimf(theta_delta.universe, [-1*math.pi/90,math.pi/90,2*math.pi/90])
         theta_delta['PM'] = fuzz.trimf(theta_delta.universe, [math.pi/90,2*math.pi/90, math.pi/30])
         theta_delta['PL'] = fuzz.smf(theta_delta.universe,2*math.pi/90,math.pi/30)
@@ -77,7 +140,7 @@ class TeamCAMController(KesslerController):
         ship_turn['NL'] = fuzz.trimf(ship_turn.universe, [-180,-180,-120])
         ship_turn['NM'] = fuzz.trimf(ship_turn.universe, [-180,-120,-60])
         ship_turn['NS'] = fuzz.trimf(ship_turn.universe, [-120,-60,60])
-        # ship_turn['Z'] = fuzz.trimf(ship_turn.universe, [-60,0,60])
+        ship_turn['Z'] = fuzz.trimf(ship_turn.universe, [-60,0,60])
         ship_turn['PS'] = fuzz.trimf(ship_turn.universe, [-60,60,120])
         ship_turn['PM'] = fuzz.trimf(ship_turn.universe, [60,120,180])
         ship_turn['PL'] = fuzz.trimf(ship_turn.universe, [120,180,180])
@@ -101,21 +164,21 @@ class TeamCAMController(KesslerController):
             ctrl.Rule(bullet_time['L'] & theta_delta['NL'], (ship_turn['NL'], ship_fire['N'])),
             ctrl.Rule(bullet_time['L'] & theta_delta['NM'], (ship_turn['NM'], ship_fire['N'])),
             ctrl.Rule(bullet_time['L'] & theta_delta['NS'], (ship_turn['NS'], ship_fire['Y'])),
-            #ctrl.Rule(bullet_time['L'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y'])),
+            ctrl.Rule(bullet_time['L'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y'])),
             ctrl.Rule(bullet_time['L'] & theta_delta['PS'], (ship_turn['PS'], ship_fire['Y'])),
             ctrl.Rule(bullet_time['L'] & theta_delta['PM'], (ship_turn['PM'], ship_fire['N'])),
             ctrl.Rule(bullet_time['L'] & theta_delta['PL'], (ship_turn['PL'], ship_fire['N'])),
             ctrl.Rule(bullet_time['M'] & theta_delta['NL'], (ship_turn['NL'], ship_fire['N'])),
             ctrl.Rule(bullet_time['M'] & theta_delta['NM'], (ship_turn['NM'], ship_fire['N'])),
             ctrl.Rule(bullet_time['M'] & theta_delta['NS'], (ship_turn['NS'], ship_fire['Y'])),
-            #ctrl.Rule(bullet_time['M'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y'])),
+            ctrl.Rule(bullet_time['M'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y'])),
             ctrl.Rule(bullet_time['M'] & theta_delta['PS'], (ship_turn['PS'], ship_fire['Y'])),
             ctrl.Rule(bullet_time['M'] & theta_delta['PM'], (ship_turn['PM'], ship_fire['N'])),
             ctrl.Rule(bullet_time['M'] & theta_delta['PL'], (ship_turn['PL'], ship_fire['N'])),
             ctrl.Rule(bullet_time['S'] & theta_delta['NL'], (ship_turn['NL'], ship_fire['Y'])),
             ctrl.Rule(bullet_time['S'] & theta_delta['NM'], (ship_turn['NM'], ship_fire['Y'])),
             ctrl.Rule(bullet_time['S'] & theta_delta['NS'], (ship_turn['NS'], ship_fire['Y'])),
-            #ctrl.Rule(bullet_time['S'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y'])),
+            ctrl.Rule(bullet_time['S'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y'])),
             ctrl.Rule(bullet_time['S'] & theta_delta['PS'], (ship_turn['PS'], ship_fire['Y'])),
             ctrl.Rule(bullet_time['S'] & theta_delta['PM'], (ship_turn['PM'], ship_fire['Y'])),
             ctrl.Rule(bullet_time['S'] & theta_delta['PL'], (ship_turn['PL'], ship_fire['Y']))
