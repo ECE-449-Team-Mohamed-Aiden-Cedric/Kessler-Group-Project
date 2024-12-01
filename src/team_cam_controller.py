@@ -133,6 +133,11 @@ class TeamCAMController(KesslerController):
             "N": tuple(values[0:3]),
             "Y": tuple(values[1:4])
         }
+        drop_mine_gene = self.__scale_gene(
+            drop_mine_gene,
+            self.__ship_drop_mine_range[0],
+            self.__ship_drop_mine_range[1]
+        )
 
         converted_chromosome: ConvertedChromosome = {
             "bullet_time": bullet_time_gene,
