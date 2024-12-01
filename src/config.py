@@ -17,6 +17,6 @@ GA_NUMBER_OF_GENES_TO_MUTATE: int = 1
 
 GA_NUMBER_OF_THREADS: int = 10 # number of threads/processes to use for GA
 
-GA_CHROMOSOME_LENGTH: int = 19
+GA_CHROMOSOME_LENGTH: int = 21
 
 GA_MODEL_FILE: str = "team_cam_controller"
