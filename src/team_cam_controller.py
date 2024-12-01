@@ -38,12 +38,13 @@ class TeamCAMController(KesslerController):
         self.__ship_turn_range: tuple[float, float] = (-180, 180) # Degrees due to Kessler
         self.__ship_fire_range: tuple[float, float] = (-1, 1)
         self.__ship_drop_mine_range: tuple[float, float] = (-1, 1)
+        self.__ship_thrust_range: tuple[float, float] = (-480.0, 480.0) # m/s^2
 
         converted_chromosome: ConvertedChromosome = self.__convert_chromosome(chromosome)
         self.__logger.log(f"converted_chromosome: {converted_chromosome}")
 
-        bullet_time, theta_delta, ship_turn, ship_fire, drop_mine = self.__setup_fuzzy_sets(converted_chromosome)
-        self.__rules: list[ctrl.Rule] = self.__get_rules(bullet_time, theta_delta, ship_turn, ship_fire, drop_mine)
+        bullet_time, theta_delta, ship_turn, ship_fire, drop_mine, ship_thrust = self.__setup_fuzzy_sets(converted_chromosome)
+        self.__rules: list[ctrl.Rule] = self.__get_rules(bullet_time, theta_delta, ship_turn, ship_fire, drop_mine, ship_thrust)
 
         targeting_control = ctrl.ControlSystem(self.__rules)
         self.__control_system_simulation = ctrl.ControlSystemSimulation(
@@ -139,12 +140,31 @@ class TeamCAMController(KesslerController):
             self.__ship_drop_mine_range[1]
         )
 
+        values: list[float] = chromosome_list[21:28]
+        values.extend([-0.01, 1.01])
+        values = sorted(values)
+        ship_thrust_gene: Gene = { # type: ignore
+            "NL": tuple(values[0:3]),
+            "NM": tuple(values[1:4]),
+            "NS": tuple(values[2:5]),
+            "Z": tuple(values[3:6]),
+            "PS": tuple(values[4:7]),
+            "PM": tuple(values[5:8]),
+            "PL": tuple(values[6:9])
+        }
+        ship_thrust_gene = self.__scale_gene(
+            ship_thrust_gene,
+            self.__ship_turn_range[0],
+            self.__ship_turn_range[1]
+        )
+
         converted_chromosome: ConvertedChromosome = {
             "bullet_time": bullet_time_gene,
             "theta_delta": theta_delta_gene,
             "ship_turn": ship_turn_gene,
             "ship_fire": ship_fire_gene,
-            "drop_mine": drop_mine_gene
+            "drop_mine": drop_mine_gene,
+            "ship_thrust": ship_thrust_gene
         }
 
         return converted_chromosome
@@ -157,7 +177,7 @@ class TeamCAMController(KesslerController):
 
         return scaled_gene
 
-    def __setup_fuzzy_sets(self, chromosome: ConvertedChromosome) -> tuple[ctrl.Antecedent, ctrl.Antecedent, ctrl.Consequent, ctrl.Consequent, ctrl.Consequent]:
+    def __setup_fuzzy_sets(self, chromosome: ConvertedChromosome) -> tuple[ctrl.Antecedent, ctrl.Antecedent, ctrl.Consequent, ctrl.Consequent, ctrl.Consequent, ctrl.Consequent]:
         """sets up the fuzzy sets with the genes defined in the Chromosome
 
         Args:
@@ -171,6 +191,7 @@ class TeamCAMController(KesslerController):
         ship_turn: ctrl.Consequent = ctrl.Consequent(np.arange(self.__ship_turn_range[0], self.__ship_turn_range[1], 1), 'ship_turn')
         ship_fire: ctrl.Consequent = ctrl.Consequent(np.arange(self.__ship_fire_range[0], self.__ship_fire_range[1], 0.1), 'ship_fire')
         drop_mine: ctrl.Consequent = ctrl.Consequent(np.arange(self.__ship_drop_mine_range[0], self.__ship_drop_mine_range[1], 0.1), 'drop_mine')
+        ship_thrust: ctrl.Consequent = ctrl.Consequent(np.arange(self.__ship_thrust_range[0], self.__ship_thrust_range[1], 1), 'ship_thrust')
 
         #Declare fuzzy sets for bullet_time (how long it takes for the bullet to reach the intercept point)
         bullet_time_gene: Gene = chromosome["bullet_time"]
@@ -210,7 +231,16 @@ class TeamCAMController(KesslerController):
         drop_mine['N'] = fuzz.trimf(drop_mine.universe, drop_mine_gene["N"])
         drop_mine['Y'] = fuzz.trimf(drop_mine.universe, drop_mine_gene["Y"])
 
-        return (bullet_time, theta_delta, ship_turn, ship_fire, drop_mine)
+        ship_thrust_gene: Gene = chromosome["ship_thrust"]
+        ship_thrust['NL'] = fuzz.trimf(ship_thrust.universe, ship_thrust_gene["NL"])
+        ship_thrust['NM'] = fuzz.trimf(ship_thrust.universe, ship_thrust_gene["NM"])
+        ship_thrust['NS'] = fuzz.trimf(ship_thrust.universe, ship_thrust_gene["NS"])
+        ship_thrust['Z']  = fuzz.trimf(ship_thrust.universe, ship_thrust_gene["Z"])
+        ship_thrust['PS'] = fuzz.trimf(ship_thrust.universe, ship_thrust_gene["PS"])
+        ship_thrust['PM'] = fuzz.trimf(ship_thrust.universe, ship_thrust_gene["PM"])
+        ship_thrust['PL'] = fuzz.trimf(ship_thrust.universe, ship_thrust_gene["PL"])
+
+        return (bullet_time, theta_delta, ship_turn, ship_fire, drop_mine, ship_thrust)
 
     @staticmethod
     def __get_rules(
@@ -218,31 +248,32 @@ class TeamCAMController(KesslerController):
             theta_delta: ctrl.Antecedent,
             ship_turn: ctrl.Consequent,
             ship_fire: ctrl.Consequent,
-            drop_mine: ctrl.Consequent
+            drop_mine: ctrl.Consequent,
+            ship_thrust: ctrl.Consequent
         ) -> list[ctrl.Rule]:
 
         rules: list[ctrl.Rule] = [
-            ctrl.Rule(bullet_time['L'] & theta_delta['NL'], (ship_turn['NL'], ship_fire['Y'], drop_mine['N'])),
-            ctrl.Rule(bullet_time['L'] & theta_delta['NM'], (ship_turn['NM'], ship_fire['Y'], drop_mine['N'])),
-            ctrl.Rule(bullet_time['L'] & theta_delta['NS'], (ship_turn['NS'], ship_fire['Y'], drop_mine['N'])),
-            ctrl.Rule(bullet_time['L'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y'], drop_mine['N'])),
-            ctrl.Rule(bullet_time['L'] & theta_delta['PS'], (ship_turn['PS'], ship_fire['Y'], drop_mine['N'])),
-            ctrl.Rule(bullet_time['L'] & theta_delta['PM'], (ship_turn['PM'], ship_fire['Y'], drop_mine['N'])),
-            ctrl.Rule(bullet_time['L'] & theta_delta['PL'], (ship_turn['PL'], ship_fire['Y'], drop_mine['N'])),
-            ctrl.Rule(bullet_time['M'] & theta_delta['NL'], (ship_turn['NL'], ship_fire['Y'], drop_mine['N'])),
-            ctrl.Rule(bullet_time['M'] & theta_delta['NM'], (ship_turn['NM'], ship_fire['Y'], drop_mine['N'])),
-            ctrl.Rule(bullet_time['M'] & theta_delta['NS'], (ship_turn['NS'], ship_fire['Y'], drop_mine['N'])),
-            ctrl.Rule(bullet_time['M'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y'], drop_mine['N'])),
-            ctrl.Rule(bullet_time['M'] & theta_delta['PS'], (ship_turn['PS'], ship_fire['Y'], drop_mine['N'])),
-            ctrl.Rule(bullet_time['M'] & theta_delta['PM'], (ship_turn['PM'], ship_fire['Y'], drop_mine['N'])),
-            ctrl.Rule(bullet_time['M'] & theta_delta['PL'], (ship_turn['PL'], ship_fire['Y'], drop_mine['N'])),
-            ctrl.Rule(bullet_time['S'] & theta_delta['NL'], (ship_turn['NL'], ship_fire['Y'], drop_mine['N'])),
-            ctrl.Rule(bullet_time['S'] & theta_delta['NM'], (ship_turn['NM'], ship_fire['Y'], drop_mine['N'])),
-            ctrl.Rule(bullet_time['S'] & theta_delta['NS'], (ship_turn['NS'], ship_fire['Y'], drop_mine['N'])),
-            ctrl.Rule(bullet_time['S'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y'], drop_mine['Y'])),
-            ctrl.Rule(bullet_time['S'] & theta_delta['PS'], (ship_turn['PS'], ship_fire['Y'], drop_mine['N'])),
-            ctrl.Rule(bullet_time['S'] & theta_delta['PM'], (ship_turn['PM'], ship_fire['Y'], drop_mine['N'])),
-            ctrl.Rule(bullet_time['S'] & theta_delta['PL'], (ship_turn['PL'], ship_fire['Y'], drop_mine['N']))
+            ctrl.Rule(bullet_time['L'] & theta_delta['NL'], (ship_turn['NL'], ship_fire['Y'], drop_mine['N'], ship_thrust['PL'])),
+            ctrl.Rule(bullet_time['L'] & theta_delta['NM'], (ship_turn['NM'], ship_fire['Y'], drop_mine['N'], ship_thrust['PL'])),
+            ctrl.Rule(bullet_time['L'] & theta_delta['NS'], (ship_turn['NS'], ship_fire['Y'], drop_mine['N'], ship_thrust['PL'])),
+            ctrl.Rule(bullet_time['L'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y'], drop_mine['N'], ship_thrust['PL'])),
+            ctrl.Rule(bullet_time['L'] & theta_delta['PS'], (ship_turn['PS'], ship_fire['Y'], drop_mine['N'], ship_thrust['PL'])),
+            ctrl.Rule(bullet_time['L'] & theta_delta['PM'], (ship_turn['PM'], ship_fire['Y'], drop_mine['N'], ship_thrust['PL'])),
+            ctrl.Rule(bullet_time['L'] & theta_delta['PL'], (ship_turn['PL'], ship_fire['Y'], drop_mine['N'], ship_thrust['PL'])),
+            ctrl.Rule(bullet_time['M'] & theta_delta['NL'], (ship_turn['NL'], ship_fire['Y'], drop_mine['N'], ship_thrust['Z'])),
+            ctrl.Rule(bullet_time['M'] & theta_delta['NM'], (ship_turn['NM'], ship_fire['Y'], drop_mine['N'], ship_thrust['Z'])),
+            ctrl.Rule(bullet_time['M'] & theta_delta['NS'], (ship_turn['NS'], ship_fire['Y'], drop_mine['N'], ship_thrust['Z'])),
+            ctrl.Rule(bullet_time['M'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y'], drop_mine['N'], ship_thrust['Z'])),
+            ctrl.Rule(bullet_time['M'] & theta_delta['PS'], (ship_turn['PS'], ship_fire['Y'], drop_mine['N'], ship_thrust['Z'])),
+            ctrl.Rule(bullet_time['M'] & theta_delta['PM'], (ship_turn['PM'], ship_fire['Y'], drop_mine['N'], ship_thrust['Z'])),
+            ctrl.Rule(bullet_time['M'] & theta_delta['PL'], (ship_turn['PL'], ship_fire['Y'], drop_mine['N'], ship_thrust['Z'])),
+            ctrl.Rule(bullet_time['S'] & theta_delta['NL'], (ship_turn['NL'], ship_fire['Y'], drop_mine['N'], ship_thrust['NL'])),
+            ctrl.Rule(bullet_time['S'] & theta_delta['NM'], (ship_turn['NM'], ship_fire['Y'], drop_mine['N'], ship_thrust['NL'])),
+            ctrl.Rule(bullet_time['S'] & theta_delta['NS'], (ship_turn['NS'], ship_fire['Y'], drop_mine['N'], ship_thrust['NL'])),
+            ctrl.Rule(bullet_time['S'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y'], drop_mine['Y'], ship_thrust['NL'])),
+            ctrl.Rule(bullet_time['S'] & theta_delta['PS'], (ship_turn['PS'], ship_fire['Y'], drop_mine['N'], ship_thrust['NL'])),
+            ctrl.Rule(bullet_time['S'] & theta_delta['PM'], (ship_turn['PM'], ship_fire['Y'], drop_mine['N'], ship_thrust['NL'])),
+            ctrl.Rule(bullet_time['S'] & theta_delta['PL'], (ship_turn['PL'], ship_fire['Y'], drop_mine['N'], ship_thrust['NL']))
         ]
 
         return rules
@@ -351,24 +382,26 @@ class TeamCAMController(KesslerController):
         # Get the defuzzified outputs
         turn_rate: float = self.__control_system_simulation.output['ship_turn']
 
+        fire: bool
         if self.__control_system_simulation.output['ship_fire'] >= 0:
             fire = True
         else:
             fire = False
-        
+
+        drop_mine: bool
         if self.__control_system_simulation.output['drop_mine'] >= 0:
             drop_mine = True
         else:
             drop_mine = False
 
         ## Aiden Teal code, will eventually move to its own controller
-        thrust = 50
+        thrust: float = self.__control_system_simulation.output['ship_thrust']
 
         self.__current_frame +=1
 
         #DEBUG
         self.__logger.log(
-            "Simulation Results\n\tThrust: {:d}\n\tBullet Time: {:.3f}\n\tShooting Theta: {:.3f}\n\tTurn Rate: {:.2f}\n\tFire: {}\n\tDrop Mine: {}".format(
+            "Simulation Results\n\tThrust: {:.1f}\n\tBullet Time: {:.3f}\n\tShooting Theta: {:.3f}\n\tTurn Rate: {:.2f}\n\tFire: {}\n\tDrop Mine: {}".format(
                 thrust, bullet_t, shooting_theta, turn_rate, fire, drop_mine
             )
         )
