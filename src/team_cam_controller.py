@@ -31,9 +31,11 @@ class TeamCAMController(KesslerController):
         theta_delta: ctrl.Antecedent
         ship_speed: ctrl.Antecedent
         ship_stopping_distance: ctrl.Antecedent
+        mine_distance: ctrl.Antecedent
         ship_turn: ctrl.Consequent
         ship_fire: ctrl.Consequent
         drop_mine: ctrl.Consequent
+        ship_thrust: ctrl.Consequent
 
         self.__bullet_time_range: tuple[float, float] = (0, 1)
         self.__theta_delta_range: tuple[float, float] = (-1*math.pi/30, math.pi/30) # Radians due to Python
