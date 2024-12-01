@@ -39,7 +39,6 @@ class TeamCAMController(KesslerController):
         self.__theta_delta_range: tuple[float, float] = (-1*math.pi/30, math.pi/30) # Radians due to Python
         self.__ship_speed_range: tuple[float, float] = (-240, 240) # m/s
         self.__ship_stopping_distance_range: tuple[float, float] = (0, 60) # m
-        self.__mine_distance_range: tuple[float, float] = (0, 1000) # m
         self.__ship_turn_range: tuple[float, float] = (-180, 180) # Degrees due to Kessler
         self.__ship_fire_range: tuple[float, float] = (-1, 1)
         self.__ship_drop_mine_range: tuple[float, float] = (-1, 1)
@@ -376,26 +375,6 @@ class TeamCAMController(KesslerController):
         ship_speed: float = math.sqrt(ship_state["velocity"][0]**2 + ship_state["velocity"][1]**2)
         stopping_time: float = ship_speed / -self.__ship_thrust_range[0]
         stopping_distance: float = (ship_speed * stopping_time) + (self.__ship_thrust_range[0] * (stopping_time**2) / 2)
-
-        closest_mine: None | dict = None
-        for mine in game_state["mines"]:
-            #Loop through all asteroids, find minimum Eudlidean distance
-            curr_dist: float = math.sqrt((ship_pos_x - mine["position"][0])**2 + (ship_pos_y - mine["position"][1])**2)
-            if closest_mine is None :
-                # Does not yet exist, so initialize first asteroid as the minimum. Ugh, how to do?
-                closest_mine = dict(mine = mine, dist = curr_dist)
-
-            else:    
-                # closest_asteroid exists, and is thus initialized. 
-                if closest_mine["dist"] > curr_dist:
-                    # New minimum found
-                    closest_mine["mine"] = mine
-                    closest_mine["dist"] = curr_dist
-
-        if closest_mine is None:
-            # there were no mines on the field
-            closest_mine = dict(mine = None, dist = self.__mine_distance_range[1])
-        closest_mine_distance: float = closest_mine["dist"]
 
         closest_asteroid: None | dict = None
 
