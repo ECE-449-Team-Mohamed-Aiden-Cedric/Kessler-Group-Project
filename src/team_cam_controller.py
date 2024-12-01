@@ -39,6 +39,7 @@ class TeamCAMController(KesslerController):
         self.__theta_delta_range: tuple[float, float] = (-1*math.pi/30, math.pi/30) # Radians due to Python
         self.__ship_speed_range: tuple[float, float] = (-240, 240) # m/s
         self.__ship_stopping_distance_range: tuple[float, float] = (0, 60) # m
+        self.__mine_distance_range: tuple[float, float] = (0, 1000) # m
         self.__ship_turn_range: tuple[float, float] = (-180, 180) # Degrees due to Kessler
         self.__ship_fire_range: tuple[float, float] = (-1, 1)
         self.__ship_drop_mine_range: tuple[float, float] = (-1, 1)
@@ -47,8 +48,8 @@ class TeamCAMController(KesslerController):
         converted_chromosome: ConvertedChromosome = self.__convert_chromosome(chromosome)
         self.__logger.log(f"converted_chromosome: {converted_chromosome}")
 
-        bullet_time, theta_delta, ship_speed, ship_stopping_distance, ship_turn, ship_fire, drop_mine, ship_thrust = self.__setup_fuzzy_sets(converted_chromosome)
-        self.__rules: list[ctrl.Rule] = self.__get_rules(bullet_time, theta_delta, ship_speed, ship_stopping_distance, ship_turn, ship_fire, drop_mine, ship_thrust)
+        bullet_time, theta_delta, ship_speed, ship_stopping_distance, mine_distance, ship_turn, ship_fire, drop_mine, ship_thrust = self.__setup_fuzzy_sets(converted_chromosome)
+        self.__rules: list[ctrl.Rule] = self.__get_rules(bullet_time, theta_delta, ship_speed, ship_stopping_distance, mine_distance, ship_turn, ship_fire, drop_mine, ship_thrust)
 
         targeting_control = ctrl.ControlSystem(self.__rules)
         self.__control_system_simulation = ctrl.ControlSystemSimulation(
@@ -192,11 +193,27 @@ class TeamCAMController(KesslerController):
             self.__ship_stopping_distance_range[1]
         )
 
+        values: list[float] = chromosome_list[36:40]
+        values.extend([-0.01, 1.01])
+        values = sorted(values)
+        mine_distance_gene: Gene = { # type: ignore
+            "Z": tuple(values[0:3]),
+            "PS": tuple(values[1:4]),
+            "PM": tuple(values[2:5]),
+            "PL": tuple(values[3:6])
+        }
+        mine_distance_gene = self.__scale_gene(
+            mine_distance_gene,
+            self.__mine_distance_range[0],
+            self.__mine_distance_range[1]
+        )
+
         converted_chromosome: ConvertedChromosome = {
             "bullet_time": bullet_time_gene,
             "theta_delta": theta_delta_gene,
             "ship_speed": ship_speed_gene,
             "ship_stopping_distance": ship_stopping_distance_gene,
+            "mine_distance": mine_distance_gene,
             "ship_turn": ship_turn_gene,
             "ship_fire": ship_fire_gene,
             "drop_mine": drop_mine_gene,
@@ -213,7 +230,7 @@ class TeamCAMController(KesslerController):
 
         return scaled_gene
 
-    def __setup_fuzzy_sets(self, chromosome: ConvertedChromosome) -> tuple[ctrl.Antecedent, ctrl.Antecedent, ctrl.Antecedent, ctrl.Antecedent, ctrl.Consequent, ctrl.Consequent, ctrl.Consequent, ctrl.Consequent]:
+    def __setup_fuzzy_sets(self, chromosome: ConvertedChromosome) -> tuple[ctrl.Antecedent, ctrl.Antecedent, ctrl.Antecedent, ctrl.Antecedent, ctrl.Antecedent, ctrl.Consequent, ctrl.Consequent, ctrl.Consequent, ctrl.Consequent]:
         """sets up the fuzzy sets with the genes defined in the Chromosome
 
         Args:
@@ -226,6 +243,7 @@ class TeamCAMController(KesslerController):
         theta_delta: ctrl.Antecedent = ctrl.Antecedent(np.arange(self.__theta_delta_range[0], self.__theta_delta_range[1], 0.1), 'theta_delta')
         ship_speed: ctrl.Antecedent = ctrl.Antecedent(np.arange(self.__ship_speed_range[0], self.__ship_speed_range[1], 0.1), 'ship_speed')
         ship_stopping_distance: ctrl.Antecedent = ctrl.Antecedent(np.arange(self.__ship_stopping_distance_range[0], self.__ship_stopping_distance_range[1], 0.1), 'ship_stopping_distance')
+        mine_distance: ctrl.Antecedent = ctrl.Antecedent(np.arange(self.__mine_distance_range[0], self.__mine_distance_range[1], 0.1), 'mine_distance')
         ship_turn: ctrl.Consequent = ctrl.Consequent(np.arange(self.__ship_turn_range[0], self.__ship_turn_range[1], 1), 'ship_turn')
         ship_fire: ctrl.Consequent = ctrl.Consequent(np.arange(self.__ship_fire_range[0], self.__ship_fire_range[1], 0.1), 'ship_fire')
         drop_mine: ctrl.Consequent = ctrl.Consequent(np.arange(self.__ship_drop_mine_range[0], self.__ship_drop_mine_range[1], 0.1), 'drop_mine')
@@ -260,6 +278,12 @@ class TeamCAMController(KesslerController):
         ship_stopping_distance['PM'] = fuzz.trimf(ship_stopping_distance.universe, ship_stopping_distance_gene["PM"])
         ship_stopping_distance['PL'] = fuzz.trimf(ship_stopping_distance.universe, ship_stopping_distance_gene["PL"])
 
+        mine_distance_gene: Gene = chromosome["mine_distance"]
+        mine_distance['Z']  = fuzz.trimf(mine_distance.universe, mine_distance_gene["Z"])
+        mine_distance['PS'] = fuzz.trimf(mine_distance.universe, mine_distance_gene["PS"])
+        mine_distance['PM'] = fuzz.trimf(mine_distance.universe, mine_distance_gene["PM"])
+        mine_distance['PL'] = fuzz.trimf(mine_distance.universe, mine_distance_gene["PL"])
+
         # Declare fuzzy sets for the ship_turn consequent; this will be returned as turn_rate.
         # Hard-coded for a game step of 1/30 seconds
         ship_turn_gene: Gene = chromosome["ship_turn"]
@@ -290,7 +314,7 @@ class TeamCAMController(KesslerController):
         ship_thrust['PM'] = fuzz.trimf(ship_thrust.universe, ship_thrust_gene["PM"])
         ship_thrust['PL'] = fuzz.trimf(ship_thrust.universe, ship_thrust_gene["PL"])
 
-        return (bullet_time, theta_delta, ship_speed, ship_stopping_distance, ship_turn, ship_fire, drop_mine, ship_thrust)
+        return (bullet_time, theta_delta, ship_speed, ship_stopping_distance, mine_distance, ship_turn, ship_fire, drop_mine, ship_thrust)
 
     @staticmethod
     def __get_rules(
@@ -298,6 +322,7 @@ class TeamCAMController(KesslerController):
             theta_delta: ctrl.Antecedent,
             ship_speed: ctrl.Antecedent,
             ship_stopping_distance: ctrl.Antecedent,
+            mine_distance: ctrl.Antecedent,
             ship_turn: ctrl.Consequent,
             ship_fire: ctrl.Consequent,
             drop_mine: ctrl.Consequent,
@@ -343,7 +368,10 @@ class TeamCAMController(KesslerController):
             ctrl.Rule(ship_speed['Z'], drop_mine['N']),
             ctrl.Rule(ship_speed['PS'], drop_mine['N']),
             ctrl.Rule(ship_speed['PM'], drop_mine['Y']),
-            ctrl.Rule(ship_speed['PL'], drop_mine['Y'])
+            ctrl.Rule(ship_speed['PL'], drop_mine['Y']),
+
+            ctrl.Rule(mine_distance['Z'], ship_thrust['PL']),
+            ctrl.Rule(mine_distance['PS'], ship_thrust['PM'])
         ]
 
         return rules
@@ -375,6 +403,26 @@ class TeamCAMController(KesslerController):
         ship_speed: float = math.sqrt(ship_state["velocity"][0]**2 + ship_state["velocity"][1]**2)
         stopping_time: float = ship_speed / -self.__ship_thrust_range[0]
         stopping_distance: float = (ship_speed * stopping_time) + (self.__ship_thrust_range[0] * (stopping_time**2) / 2)
+
+        closest_mine: None | dict = None
+        for mine in game_state["mines"]:
+            #Loop through all asteroids, find minimum Eudlidean distance
+            curr_dist: float = math.sqrt((ship_pos_x - mine["position"][0])**2 + (ship_pos_y - mine["position"][1])**2)
+            if closest_mine is None :
+                # Does not yet exist, so initialize first asteroid as the minimum. Ugh, how to do?
+                closest_mine = dict(mine = mine, dist = curr_dist)
+
+            else:    
+                # closest_asteroid exists, and is thus initialized. 
+                if closest_mine["dist"] > curr_dist:
+                    # New minimum found
+                    closest_mine["mine"] = mine
+                    closest_mine["dist"] = curr_dist
+
+        if closest_mine is None:
+            # there were no mines on the field
+            closest_mine = dict(mine = None, dist = self.__mine_distance_range[1])
+        closest_mine_distance: float = closest_mine["dist"]
 
         closest_asteroid: None | dict = None
 
@@ -453,6 +501,7 @@ class TeamCAMController(KesslerController):
         self.__control_system_simulation.input['theta_delta'] = shooting_theta
         self.__control_system_simulation.input['ship_speed'] = ship_speed
         self.__control_system_simulation.input['ship_stopping_distance'] = stopping_distance
+        self.__control_system_simulation.input['mine_distance'] = closest_mine_distance
 
         self.__control_system_simulation.compute()
 
