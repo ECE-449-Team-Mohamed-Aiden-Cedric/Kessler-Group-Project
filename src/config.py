@@ -10,7 +10,7 @@ SEED: int = 42069
 # fitness of unoptimized Dr. Dick model on seed 42069: 40.91447368421052
 
 GA_POPULATION_SIZE: int = 20
-GA_GENERATION_GOAL: int = 10
+GA_GENERATION_GOAL: int = 10000
 GA_FITNESS_GOAL: float = 10000
 GA_NUMBER_OF_PARENTS: int = 5
 GA_NUMBER_OF_GENES_TO_MUTATE: int = 1
@@ -20,3 +20,6 @@ GA_NUMBER_OF_THREADS: int = 10 # number of threads/processes to use for GA
 GA_CHROMOSOME_LENGTH: int = 40
 
 GA_MODEL_FILE: str = "team_cam_controller"
+
+GA_RESTART_FROM_SCRATCH: bool = False # if False, continues from saved model file
+GA_STOP_FLAG_FILE: str = "safely_stop_genetic_learner.txt"
