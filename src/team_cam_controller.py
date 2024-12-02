@@ -165,14 +165,17 @@ class TeamCAMController(KesslerController):
             self.__ship_turn_range[1]
         )
 
-        values: list[float] = chromosome_list[28:32]
+        values: list[float] = chromosome_list[28:35]
         values.extend([-0.01, 1.01])
         values = sorted(values)
         ship_speed_gene: Gene = { # type: ignore
-            "Z": tuple(values[0:3]),
-            "PS": tuple(values[1:4]),
-            "PM": tuple(values[2:5]),
-            "PL": tuple(values[3:6])
+            "NL": tuple(values[0:3]),
+            "NM": tuple(values[1:4]),
+            "NS": tuple(values[2:5]),
+            "Z": tuple(values[3:6]),
+            "PS": tuple(values[4:7]),
+            "PM": tuple(values[5:8]),
+            "PL": tuple(values[6:9])
         }
         ship_speed_gene = self.__scale_gene(
             ship_speed_gene,
@@ -180,7 +183,7 @@ class TeamCAMController(KesslerController):
             self.__ship_speed_range[1]
         )
 
-        values: list[float] = chromosome_list[32:36]
+        values: list[float] = chromosome_list[35:39]
         values.extend([-0.01, 1.01])
         values = sorted(values)
         ship_stopping_distance_gene: Gene = { # type: ignore
@@ -195,7 +198,7 @@ class TeamCAMController(KesslerController):
             self.__ship_stopping_distance_range[1]
         )
 
-        values: list[float] = chromosome_list[36:40]
+        values: list[float] = chromosome_list[39:43]
         values.extend([-0.01, 1.01])
         values = sorted(values)
         mine_distance_gene: Gene = { # type: ignore
@@ -269,6 +272,9 @@ class TeamCAMController(KesslerController):
         theta_delta['PL'] = fuzz.trimf(theta_delta.universe, theta_delta_gene["PL"])
 
         ship_speed_gene: Gene = chromosome["ship_speed"]
+        ship_speed['NL'] = fuzz.trimf(ship_speed.universe, ship_speed_gene["NL"])
+        ship_speed['NM'] = fuzz.trimf(ship_speed.universe, ship_speed_gene["NM"])
+        ship_speed['NS'] = fuzz.trimf(ship_speed.universe, ship_speed_gene["NS"])
         ship_speed['Z']  = fuzz.trimf(ship_speed.universe, ship_speed_gene["Z"])
         ship_speed['PS'] = fuzz.trimf(ship_speed.universe, ship_speed_gene["PS"])
         ship_speed['PM'] = fuzz.trimf(ship_speed.universe, ship_speed_gene["PM"])
@@ -367,6 +373,9 @@ class TeamCAMController(KesslerController):
             ctrl.Rule(ship_stopping_distance['Z'] & bullet_time['M'], ship_thrust['PS']),
             ctrl.Rule(ship_stopping_distance['Z'] & bullet_time['L'], ship_thrust['PM']),
 
+            ctrl.Rule(ship_speed['NL'], drop_mine['Y']),
+            ctrl.Rule(ship_speed['NM'], drop_mine['Y']),
+            ctrl.Rule(ship_speed['NS'], drop_mine['N']),
             ctrl.Rule(ship_speed['Z'], drop_mine['N']),
             ctrl.Rule(ship_speed['PS'], drop_mine['N']),
             ctrl.Rule(ship_speed['PM'], drop_mine['Y']),
@@ -403,6 +412,14 @@ class TeamCAMController(KesslerController):
         ship_pos_y: float = ship_state["position"][1]    
 
         ship_speed: float = math.sqrt(ship_state["velocity"][0]**2 + ship_state["velocity"][1]**2)
+        ship_heading: float = ship_state['heading']
+        if (ship_heading >= 0 and ship_heading < 180):
+            # ship is heading upwards in some amount
+            if (ship_state['velocity'][1] < 0):
+                ship_speed *= -1
+        else:
+            if (ship_state['velocity'][1] >= 0):
+                ship_speed *= -1
         stopping_time: float = ship_speed / -self.__ship_thrust_range[0]
         stopping_distance: float = (ship_speed * stopping_time) + (self.__ship_thrust_range[0] * (stopping_time**2) / 2)
 
