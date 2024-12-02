@@ -411,17 +411,9 @@ class TeamCAMController(KesslerController):
         ship_pos_x: float = ship_state["position"][0]     # See src/kesslergame/ship.py in the KesslerGame Github
         ship_pos_y: float = ship_state["position"][1]    
 
-        ship_speed: float = math.sqrt(ship_state["velocity"][0]**2 + ship_state["velocity"][1]**2)
-        ship_heading: float = ship_state['heading']
-        if (ship_heading >= 0 and ship_heading < 180):
-            # ship is heading upwards in some amount
-            if (ship_state['velocity'][1] < 0):
-                ship_speed *= -1
-        else:
-            if (ship_state['velocity'][1] >= 0):
-                ship_speed *= -1
-        stopping_time: float = ship_speed / -self.__ship_thrust_range[0]
-        stopping_distance: float = (ship_speed * stopping_time) + (self.__ship_thrust_range[0] * (stopping_time**2) / 2)
+        ship_speed: float = ship_state["speed"]
+        stopping_time: float = abs(ship_speed / -self.__ship_thrust_range[0])
+        stopping_distance: float = (abs(ship_speed) * stopping_time) + (self.__ship_thrust_range[0] * (stopping_time**2) / 2)
 
         closest_mine: None | dict = None
         for mine in game_state["mines"]:
