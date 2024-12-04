@@ -61,43 +61,49 @@ def fitness(ga_instance: pygad.GA, chromosome: Chromosome, solution_idx: int) ->
     Returns:
         float: fitness score to be maximized
     """
-    controller: TeamCAMController = TeamCAMController(chromosome)
-    scenario: Scenario = Scenario(
-        name = "Fitness Scenario",
-        num_asteroids = 10,
-        ship_states = [
-            {
-                "position": (400, 400),
-                "angle": 90,
-                "lives": 3,
-                "team": 1,
-                "mines_remaining": 3
-            }
-        ],
-        map_size = (1000, 800),
-        time_limit = 60,
-        ammo_limit_multiplier = 0,
-        stop_if_no_ammo = False,
-        seed = config.SEED
-    )
+    final_fitness_score: float = 0
 
-    game_settings: dict[str, Any] = {
-        "perf_tracker": True,
-        "graphics_type": GraphicsType.Tkinter,
-        "realtime_multiplier": 1,
-        "graphics_obj": None,
-        "frequency": 30
-    }
+    for seed in config.SEEDS:
+        scenario: Scenario = Scenario(
+            name = "Fitness Scenario",
+            num_asteroids = 10,
+            ship_states = [
+                {
+                    "position": (400, 400),
+                    "angle": 90,
+                    "lives": 3,
+                    "team": 1,
+                    "mines_remaining": 3
+                }
+            ],
+            map_size = (1000, 800),
+            time_limit = 60,
+            ammo_limit_multiplier = 0,
+            stop_if_no_ammo = False,
+            seed = seed
+        )
 
-    game: KesslerGame
-    if config.RUN_WITH_GRAPHICS:
-        game = KesslerGame(settings = game_settings)
-    else:
-        game = TrainerEnvironment(settings = game_settings)
+        controller: TeamCAMController = TeamCAMController(chromosome)
 
-    score: Team = execute_fuzzy_inference(game, scenario, controller)
+        game_settings: dict[str, Any] = {
+            "perf_tracker": True,
+            "graphics_type": GraphicsType.Tkinter,
+            "realtime_multiplier": 1,
+            "graphics_obj": None,
+            "frequency": 30
+        }
 
-    final_fitness_score: float = fitness_score_function(score)
+        game: KesslerGame
+        if config.RUN_WITH_GRAPHICS:
+            game = KesslerGame(settings = game_settings)
+        else:
+            game = TrainerEnvironment(settings = game_settings)
+
+        score: Team = execute_fuzzy_inference(game, scenario, controller)
+
+        final_fitness_score += fitness_score_function(score)
+
+    final_fitness_score /= len(config.SEEDS)
 
     print(f"iteration fitness: {final_fitness_score}")
 

@@ -5,7 +5,7 @@ RUN_WITH_GRAPHICS: bool = False
 USE_SIMULATION_CACHE: bool = True # default is True
 FLUSH_SIMULATION_CACHE_AFTER_RUN: int = 1000 # default is 1000
 
-SEED: int = 42069
+SEEDS: list[int] = [42069, 12345, 314159, 42, 666]
 
 # fitness of unoptimized Dr. Dick model on seed 42069: 40.91447368421052
 

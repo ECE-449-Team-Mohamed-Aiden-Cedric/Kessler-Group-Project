@@ -580,11 +580,11 @@ class TeamCAMController(KesslerController):
         self.__current_frame +=1
 
         #DEBUG
-        self.__logger.log(
-            "Simulation Results\n\tThrust: {:.1f}\n\tBullet Time: {:.3f}\n\tShooting Theta: {:.3f}\n\tTurn Rate: {:.2f}\n\tFire: {}\n\tDrop Mine: {}".format(
-                thrust, bullet_t, shooting_theta, turn_rate, fire, drop_mine
-            )
-        )
+        #self.__logger.log(
+        #    "Simulation Results\n\tThrust: {:.1f}\n\tBullet Time: {:.3f}\n\tShooting Theta: {:.3f}\n\tTurn Rate: {:.2f}\n\tFire: {}\n\tDrop Mine: {}".format(
+        #        thrust, bullet_t, shooting_theta, turn_rate, fire, drop_mine
+        #    )
+        #)
 
         return thrust, turn_rate, fire, drop_mine
 
