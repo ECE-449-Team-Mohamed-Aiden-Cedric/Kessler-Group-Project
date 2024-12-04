@@ -61,7 +61,7 @@ def fitness(ga_instance: pygad.GA, chromosome: Chromosome, solution_idx: int) ->
     Returns:
         float: fitness score to be maximized
     """
-    controller: TeamCAMController = TeamCAMController(chromosome)
+    controller: TeamCAMController = TeamCAMController()
     scenario: Scenario = Scenario(
         name = "Fitness Scenario",
         num_asteroids = 10,
