@@ -262,16 +262,16 @@ class TeamCAMController(KesslerController):
         Returns:
             tuple[ctrl.Antecedent, ctrl.Antecedent, ctrl.Consequent, ctrl.Consequent]: bullet_time, theta_delta, ship_turn, ship_fire
         """
-        bullet_time: ctrl.Antecedent = ctrl.Antecedent(np.arange(self.__bullet_time_range[0], self.__bullet_time_range[1], 0.002), 'bullet_time')
+        bullet_time: ctrl.Antecedent = ctrl.Antecedent(np.arange(self.__bullet_time_range[0], self.__bullet_time_range[1], 0.01), 'bullet_time')
         theta_delta: ctrl.Antecedent = ctrl.Antecedent(np.arange(self.__theta_delta_range[0], self.__theta_delta_range[1], 0.1), 'theta_delta')
-        ship_speed: ctrl.Antecedent = ctrl.Antecedent(np.arange(self.__ship_speed_range[0], self.__ship_speed_range[1], 0.1), 'ship_speed')
-        ship_stopping_distance: ctrl.Antecedent = ctrl.Antecedent(np.arange(self.__ship_stopping_distance_range[0], self.__ship_stopping_distance_range[1], 0.1), 'ship_stopping_distance')
-        mine_distance: ctrl.Antecedent = ctrl.Antecedent(np.arange(self.__mine_distance_range[0], self.__mine_distance_range[1], 0.1), 'mine_distance')
-        asteroid_distance: ctrl.Antecedent = ctrl.Antecedent(np.arange(self.__asteroid_distance_range[0], self.__asteroid_distance_range[1], 0.1), 'asteroid_distance')
+        ship_speed: ctrl.Antecedent = ctrl.Antecedent(np.arange(self.__ship_speed_range[0], self.__ship_speed_range[1], 5), 'ship_speed')
+        ship_stopping_distance: ctrl.Antecedent = ctrl.Antecedent(np.arange(self.__ship_stopping_distance_range[0], self.__ship_stopping_distance_range[1], 1), 'ship_stopping_distance')
+        mine_distance: ctrl.Antecedent = ctrl.Antecedent(np.arange(self.__mine_distance_range[0], self.__mine_distance_range[1], 1), 'mine_distance')
+        asteroid_distance: ctrl.Antecedent = ctrl.Antecedent(np.arange(self.__asteroid_distance_range[0], self.__asteroid_distance_range[1], 1), 'asteroid_distance')
         ship_turn: ctrl.Consequent = ctrl.Consequent(np.arange(self.__ship_turn_range[0], self.__ship_turn_range[1], 1), 'ship_turn')
         ship_fire: ctrl.Consequent = ctrl.Consequent(np.arange(self.__ship_fire_range[0], self.__ship_fire_range[1], 0.1), 'ship_fire')
         drop_mine: ctrl.Consequent = ctrl.Consequent(np.arange(self.__ship_drop_mine_range[0], self.__ship_drop_mine_range[1], 0.1), 'drop_mine')
-        ship_thrust: ctrl.Consequent = ctrl.Consequent(np.arange(self.__ship_thrust_range[0], self.__ship_thrust_range[1], 1), 'ship_thrust')
+        ship_thrust: ctrl.Consequent = ctrl.Consequent(np.arange(self.__ship_thrust_range[0], self.__ship_thrust_range[1], 5), 'ship_thrust')
 
         #Declare fuzzy sets for bullet_time (how long it takes for the bullet to reach the intercept point)
         bullet_time_gene: Gene = chromosome["bullet_time"]
