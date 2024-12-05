@@ -115,6 +115,7 @@ def on_generation(ga_instance: pygad.GA):
     print("Fitness of best solution: {:.2f}".format(ga_instance.best_solution(ga_instance.last_generation_fitness)[1]))
     if check_stop_flag():
         print("Detected change in stop flag file, ending")
+        ga_instance.plot_fitness()
         exit(1)
 
 def create_stop_flag_file():
