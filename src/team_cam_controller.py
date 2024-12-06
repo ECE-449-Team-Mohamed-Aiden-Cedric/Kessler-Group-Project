@@ -1,14 +1,29 @@
 # ECE 449 Intelligent Systems Engineering
+# Fall 2023
+# Dr. Scott Dick
+from typing import Dict, Tuple, Any
+from immutabledict import immutabledict
 
-from kesslergame import KesslerController
+# Demonstration of a fuzzy tree-based controller for Kessler Game.
+# Please see the Kessler Game Development Guide by Dr. Scott Dick for a
+#   detailed discussion of this source code.
+
+from kesslergame import KesslerController # In Eclipse, the name of the library is kesslergame, not src.kesslergame
+from typing import Dict, Tuple
 import skfuzzy as fuzz
 from skfuzzy import control as ctrl
 import math
 import numpy as np
+import config as config
+from logger import Logger
+
+from gene import Gene
+from chromosome import Chromosome
+from converted_chromosome import ConvertedChromosome
 
 class TeamCAMController(KesslerController): 
     def __init__(self):
-        chromosome = np.array([
+        chromosome: Chromosome = np.array([
             0.53264121, 0.83551964, 0.12328518, 0.46792956, 0.21207323, 0.62929737,
             0.0137087 , 0.30434844, 0.94894379, 0.95568027, 0.66129262, 0.19494145,
             0.26511244, 0.57989769, 0.97786834, 0.11666997, 0.33269991, 0.63392739,
@@ -19,6 +34,8 @@ class TeamCAMController(KesslerController):
             0.77705731, 0.01199629, 0.41109162, 0.06071307, 0.04677176
         ])
         self.__current_frame = 0
+
+        self.__logger: Logger = Logger(config.LOG_FILE_PATH)
 
         bullet_time: ctrl.Antecedent
         theta_delta: ctrl.Antecedent
@@ -42,7 +59,8 @@ class TeamCAMController(KesslerController):
         self.__ship_drop_mine_range: tuple[float, float] = (-1, 1)
         self.__ship_thrust_range: tuple[float, float] = (-480.0, 480.0) # m/s^2
 
-        converted_chromosome = self.__convert_chromosome(chromosome)
+        converted_chromosome: ConvertedChromosome = self.__convert_chromosome(chromosome)
+        self.__logger.log(f"converted_chromosome: {converted_chromosome}")
 
         bullet_time, theta_delta, ship_speed, ship_stopping_distance, mine_distance, asteroid_distance, ship_turn, ship_fire, drop_mine, ship_thrust = self.__setup_fuzzy_sets(converted_chromosome)
         self.__rules: list[ctrl.Rule] = self.__get_rules(bullet_time, theta_delta, ship_speed, ship_stopping_distance, mine_distance, asteroid_distance, ship_turn, ship_fire, drop_mine, ship_thrust)
@@ -50,11 +68,11 @@ class TeamCAMController(KesslerController):
         targeting_control = ctrl.ControlSystem(self.__rules)
         self.__control_system_simulation = ctrl.ControlSystemSimulation(
             targeting_control,
-            cache=True,
-            flush_after_run=1000
+            cache=config.USE_SIMULATION_CACHE,
+            flush_after_run=config.FLUSH_SIMULATION_CACHE_AFTER_RUN
         )
 
-    def __convert_chromosome(self, chromosome):
+    def __convert_chromosome(self, chromosome: Chromosome) -> ConvertedChromosome:
         """converts a list of floats into something usable by setup_fuzzy_sets
 
         Args:
@@ -68,7 +86,7 @@ class TeamCAMController(KesslerController):
         values: list[float] = chromosome_list[0:3]
         values.extend([-0.01, 1.01])
         values = sorted(values)
-        bullet_time_gene = { # type: ignore
+        bullet_time_gene: Gene = { # type: ignore
             "S": tuple(values[0:3]),
             "M": tuple(values[1:4]),
             "L": tuple(values[2:5])
@@ -82,7 +100,7 @@ class TeamCAMController(KesslerController):
         values: list[float] = chromosome_list[3:10]
         values.extend([-0.01, 1.01])
         values = sorted(values)
-        theta_delta_gene = { # type: ignore
+        theta_delta_gene: Gene = { # type: ignore
             "NL": tuple(values[0:3]),
             "NM": tuple(values[1:4]),
             "NS": tuple(values[2:5]),
@@ -100,7 +118,7 @@ class TeamCAMController(KesslerController):
         values: list[float] = chromosome_list[10:17]
         values.extend([-0.01, 1.01])
         values = sorted(values)
-        ship_turn_gene = { # type: ignore
+        ship_turn_gene: Gene = { # type: ignore
             "NL": tuple(values[0:3]),
             "NM": tuple(values[1:4]),
             "NS": tuple(values[2:5]),
@@ -118,7 +136,7 @@ class TeamCAMController(KesslerController):
         values: list[float] = chromosome_list[17:19]
         values.extend([-0.01, 1.01])
         values = sorted(values)
-        ship_fire_gene = { # type: ignore
+        ship_fire_gene: Gene = { # type: ignore
             "N": tuple(values[0:3]),
             "Y": tuple(values[1:4])
         }
@@ -131,7 +149,7 @@ class TeamCAMController(KesslerController):
         values: list[float] = chromosome_list[19:21]
         values.extend([-0.01, 1.01])
         values = sorted(values)
-        drop_mine_gene = { # type: ignore
+        drop_mine_gene: Gene = { # type: ignore
             "N": tuple(values[0:3]),
             "Y": tuple(values[1:4])
         }
@@ -144,7 +162,7 @@ class TeamCAMController(KesslerController):
         values: list[float] = chromosome_list[21:28]
         values.extend([-0.01, 1.01])
         values = sorted(values)
-        ship_thrust_gene = { # type: ignore
+        ship_thrust_gene: Gene = { # type: ignore
             "NL": tuple(values[0:3]),
             "NM": tuple(values[1:4]),
             "NS": tuple(values[2:5]),
@@ -162,7 +180,7 @@ class TeamCAMController(KesslerController):
         values: list[float] = chromosome_list[28:35]
         values.extend([-0.01, 1.01])
         values = sorted(values)
-        ship_speed_gene = { # type: ignore
+        ship_speed_gene: Gene = { # type: ignore
             "NL": tuple(values[0:3]),
             "NM": tuple(values[1:4]),
             "NS": tuple(values[2:5]),
@@ -180,7 +198,7 @@ class TeamCAMController(KesslerController):
         values: list[float] = chromosome_list[35:39]
         values.extend([-0.01, 1.01])
         values = sorted(values)
-        ship_stopping_distance_gene = { # type: ignore
+        ship_stopping_distance_gene: Gene = { # type: ignore
             "Z": tuple(values[0:3]),
             "PS": tuple(values[1:4]),
             "PM": tuple(values[2:5]),
@@ -195,7 +213,7 @@ class TeamCAMController(KesslerController):
         values: list[float] = chromosome_list[39:43]
         values.extend([-0.01, 1.01])
         values = sorted(values)
-        mine_distance_gene = { # type: ignore
+        mine_distance_gene: Gene = { # type: ignore
             "Z": tuple(values[0:3]),
             "PS": tuple(values[1:4]),
             "PM": tuple(values[2:5]),
@@ -210,7 +228,7 @@ class TeamCAMController(KesslerController):
         values: list[float] = chromosome_list[43:47]
         values.extend([-0.01, 1.01])
         values = sorted(values)
-        asteroid_distance_gene = { # type: ignore
+        asteroid_distance_gene: Gene = { # type: ignore
             "Z": tuple(values[0:3]),
             "PS": tuple(values[1:4]),
             "PM": tuple(values[2:5]),
@@ -222,7 +240,7 @@ class TeamCAMController(KesslerController):
             self.__asteroid_distance_range[1]
         )
 
-        converted_chromosome = {
+        converted_chromosome: ConvertedChromosome = {
             "bullet_time": bullet_time_gene,
             "theta_delta": theta_delta_gene,
             "ship_speed": ship_speed_gene,
@@ -238,14 +256,14 @@ class TeamCAMController(KesslerController):
         return converted_chromosome
 
     @staticmethod
-    def __scale_gene(gene, minimum: float, maximum: float):
-        scaled_gene = dict()
+    def __scale_gene(gene: Gene, minimum: float, maximum: float) -> Gene:
+        scaled_gene: Gene = dict()
         for key in gene.keys():
             scaled_gene[key] = tuple([(gene[key][i] * (maximum - minimum)) + minimum for i in range(3)]) # type: ignore
 
         return scaled_gene
 
-    def __setup_fuzzy_sets(self, chromosome) -> tuple[ctrl.Antecedent, ctrl.Antecedent, ctrl.Antecedent, ctrl.Antecedent, ctrl.Antecedent, ctrl.Antecedent, ctrl.Consequent, ctrl.Consequent, ctrl.Consequent, ctrl.Consequent]:
+    def __setup_fuzzy_sets(self, chromosome: ConvertedChromosome) -> tuple[ctrl.Antecedent, ctrl.Antecedent, ctrl.Antecedent, ctrl.Antecedent, ctrl.Antecedent, ctrl.Antecedent, ctrl.Consequent, ctrl.Consequent, ctrl.Consequent, ctrl.Consequent]:
         """sets up the fuzzy sets with the genes defined in the Chromosome
 
         Args:
@@ -266,14 +284,14 @@ class TeamCAMController(KesslerController):
         ship_thrust: ctrl.Consequent = ctrl.Consequent(np.arange(self.__ship_thrust_range[0], self.__ship_thrust_range[1], 5), 'ship_thrust')
 
         #Declare fuzzy sets for bullet_time (how long it takes for the bullet to reach the intercept point)
-        bullet_time_gene = chromosome["bullet_time"]
+        bullet_time_gene: Gene = chromosome["bullet_time"]
         bullet_time['S'] = fuzz.trimf(bullet_time.universe, bullet_time_gene["S"])
         bullet_time['M'] = fuzz.trimf(bullet_time.universe, bullet_time_gene["M"])
         bullet_time['L'] = fuzz.trimf(bullet_time.universe, bullet_time_gene["L"])
 
         # Declare fuzzy sets for theta_delta (degrees of turn needed to reach the calculated firing angle)
         # Hard-coded for a game step of 1/30 seconds
-        theta_delta_gene = chromosome["theta_delta"]
+        theta_delta_gene: Gene = chromosome["theta_delta"]
         theta_delta['NL'] = fuzz.trimf(theta_delta.universe, theta_delta_gene["NL"])
         theta_delta['NM'] = fuzz.trimf(theta_delta.universe, theta_delta_gene["NM"])
         theta_delta['NS'] = fuzz.trimf(theta_delta.universe, theta_delta_gene["NS"])
@@ -282,7 +300,7 @@ class TeamCAMController(KesslerController):
         theta_delta['PM'] = fuzz.trimf(theta_delta.universe, theta_delta_gene["PM"])
         theta_delta['PL'] = fuzz.trimf(theta_delta.universe, theta_delta_gene["PL"])
 
-        ship_speed_gene = chromosome["ship_speed"]
+        ship_speed_gene: Gene = chromosome["ship_speed"]
         ship_speed['NL'] = fuzz.trimf(ship_speed.universe, ship_speed_gene["NL"])
         ship_speed['NM'] = fuzz.trimf(ship_speed.universe, ship_speed_gene["NM"])
         ship_speed['NS'] = fuzz.trimf(ship_speed.universe, ship_speed_gene["NS"])
@@ -291,19 +309,19 @@ class TeamCAMController(KesslerController):
         ship_speed['PM'] = fuzz.trimf(ship_speed.universe, ship_speed_gene["PM"])
         ship_speed['PL'] = fuzz.trimf(ship_speed.universe, ship_speed_gene["PL"])
 
-        ship_stopping_distance_gene = chromosome["ship_stopping_distance"]
+        ship_stopping_distance_gene: Gene = chromosome["ship_stopping_distance"]
         ship_stopping_distance['Z']  = fuzz.trimf(ship_stopping_distance.universe, ship_stopping_distance_gene["Z"])
         ship_stopping_distance['PS'] = fuzz.trimf(ship_stopping_distance.universe, ship_stopping_distance_gene["PS"])
         ship_stopping_distance['PM'] = fuzz.trimf(ship_stopping_distance.universe, ship_stopping_distance_gene["PM"])
         ship_stopping_distance['PL'] = fuzz.trimf(ship_stopping_distance.universe, ship_stopping_distance_gene["PL"])
 
-        mine_distance_gene = chromosome["mine_distance"]
+        mine_distance_gene: Gene = chromosome["mine_distance"]
         mine_distance['Z']  = fuzz.trimf(mine_distance.universe, mine_distance_gene["Z"])
         mine_distance['PS'] = fuzz.trimf(mine_distance.universe, mine_distance_gene["PS"])
         mine_distance['PM'] = fuzz.trimf(mine_distance.universe, mine_distance_gene["PM"])
         mine_distance['PL'] = fuzz.trimf(mine_distance.universe, mine_distance_gene["PL"])
 
-        asteroid_distance_gene = chromosome["asteroid_distance"]
+        asteroid_distance_gene: Gene = chromosome["asteroid_distance"]
         asteroid_distance['Z']  = fuzz.trimf(asteroid_distance.universe, asteroid_distance_gene["Z"])
         asteroid_distance['PS'] = fuzz.trimf(asteroid_distance.universe, asteroid_distance_gene["PS"])
         asteroid_distance['PM'] = fuzz.trimf(asteroid_distance.universe, asteroid_distance_gene["PM"])
@@ -311,7 +329,7 @@ class TeamCAMController(KesslerController):
 
         # Declare fuzzy sets for the ship_turn consequent; this will be returned as turn_rate.
         # Hard-coded for a game step of 1/30 seconds
-        ship_turn_gene = chromosome["ship_turn"]
+        ship_turn_gene: Gene = chromosome["ship_turn"]
         ship_turn['NL'] = fuzz.trimf(ship_turn.universe, ship_turn_gene["NL"])
         ship_turn['NM'] = fuzz.trimf(ship_turn.universe, ship_turn_gene["NM"])
         ship_turn['NS'] = fuzz.trimf(ship_turn.universe, ship_turn_gene["NS"])
@@ -322,15 +340,15 @@ class TeamCAMController(KesslerController):
 
         #Declare singleton fuzzy sets for the ship_fire consequent; -1 -> don't fire, +1 -> fire; this will be  thresholded
         #   and returned as the boolean 'fire'
-        ship_fire_gene = chromosome["ship_fire"]
+        ship_fire_gene: Gene = chromosome["ship_fire"]
         ship_fire['N'] = fuzz.trimf(ship_fire.universe, ship_fire_gene["N"])
         ship_fire['Y'] = fuzz.trimf(ship_fire.universe, ship_fire_gene["Y"])
 
-        drop_mine_gene = chromosome["drop_mine"]
+        drop_mine_gene: Gene = chromosome["drop_mine"]
         drop_mine['N'] = fuzz.trimf(drop_mine.universe, drop_mine_gene["N"])
         drop_mine['Y'] = fuzz.trimf(drop_mine.universe, drop_mine_gene["Y"])
 
-        ship_thrust_gene = chromosome["ship_thrust"]
+        ship_thrust_gene: Gene = chromosome["ship_thrust"]
         ship_thrust['NL'] = fuzz.trimf(ship_thrust.universe, ship_thrust_gene["NL"])
         ship_thrust['NM'] = fuzz.trimf(ship_thrust.universe, ship_thrust_gene["NM"])
         ship_thrust['NS'] = fuzz.trimf(ship_thrust.universe, ship_thrust_gene["NS"])
@@ -419,7 +437,7 @@ class TeamCAMController(KesslerController):
 
         return rules
 
-    def actions(self, ship_state, game_state):
+    def actions(self, ship_state: Dict[str, Any], game_state: immutabledict[Any, Any]) -> Tuple[float, float, bool, bool]:
         """
         Method processed each time step by this controller.
         """
@@ -570,6 +588,13 @@ class TeamCAMController(KesslerController):
         thrust: float = self.__control_system_simulation.output['ship_thrust']
 
         self.__current_frame +=1
+
+        #DEBUG
+        #self.__logger.log(
+        #    "Simulation Results\n\tThrust: {:.1f}\n\tBullet Time: {:.3f}\n\tShooting Theta: {:.3f}\n\tTurn Rate: {:.2f}\n\tFire: {}\n\tDrop Mine: {}".format(
+        #        thrust, bullet_t, shooting_theta, turn_rate, fire, drop_mine
+        #    )
+        #)
 
         return thrust, turn_rate, fire, drop_mine
 
