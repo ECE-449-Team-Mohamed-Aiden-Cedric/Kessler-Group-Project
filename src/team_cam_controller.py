@@ -22,9 +22,19 @@ from chromosome import Chromosome
 from converted_chromosome import ConvertedChromosome
 
 class TeamCAMController(KesslerController): 
-    def __init__(self, chromosome: Chromosome):
+    def __init__(self):
+        chromosome: Chromosome = np.array([
+            0.53264121, 0.83551964, 0.12328518, 0.46792956, 0.21207323, 0.62929737,
+            0.0137087 , 0.30434844, 0.94894379, 0.95568027, 0.66129262, 0.19494145,
+            0.26511244, 0.57989769, 0.97786834, 0.11666997, 0.33269991, 0.63392739,
+            0.37048616, 0.63926979, 0.12756307, 0.26806753, 0.84493184, 0.40283466,
+            0.33850921, 0.34584536, 0.5599862 , 0.27184446, 0.27167216, 0.50216159,
+            0.57809627, 0.14719447, 0.03953411, 0.75225761, 0.91950349, 0.70625513,
+            0.51579456, 0.85022616, 0.26546393, 0.95394062, 0.38542613, 0.73434039,
+            0.77705731, 0.01199629, 0.41109162, 0.06071307, 0.04677176
+        ])
         self.__current_frame = 0
-        
+
         self.__logger: Logger = Logger(config.LOG_FILE_PATH)
 
         bullet_time: ctrl.Antecedent
