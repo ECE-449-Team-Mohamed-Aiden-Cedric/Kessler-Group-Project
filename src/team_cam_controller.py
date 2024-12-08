@@ -50,7 +50,7 @@ class TeamCAMController(KesslerController):
         self.__drop_mine_fuzzy_rules: list[ctrl.Rule] | None = None
         self.__ship_thrust_fuzzy_rules: list[ctrl.Rule] | None = None
 
-        self.__greatest_threat_asteroid_threat_time_range: tuple[float, float] = (0, 60)
+        self.__greatest_threat_asteroid_threat_time_range: tuple[float, float] = (0, 100)
         self.__greatest_threat_asteroid_size_range: tuple[float, float] = (0, 4)
         self.__closest_asteroid_size_range: tuple[float, float] = (0, 4)
         self.__ship_distance_from_nearest_edge_range: tuple[float, float] = (0, 1) # gets set correctly on first iteration of game (once the map size is known)
@@ -1080,7 +1080,7 @@ class TeamCAMController(KesslerController):
 
         greatest_threat_asteroid_index: None | int = self.__find_greatest_threat_asteroid(ship_position, ship_velocity, ship_radius, asteroids)
         greatest_threat_asteroid: dict[str, Any] | None = None
-        greatest_threat_asteroid_threat_time: float = 10000
+        greatest_threat_asteroid_threat_time: float = 100
         greatest_threat_asteroid_radius: float = 0
         greatest_threat_asteroid_size: int = 0
         greatest_threat_asteroid_position: tuple[float, float] = (0, 0)
@@ -1298,7 +1298,7 @@ class TeamCAMController(KesslerController):
                 closest_mine_distance = mine_distance
                 closest_mine_index = index
 
-        assert (closest_mine_distance is None == closest_mine_index is None)
+        assert ((closest_mine_distance is None) == (closest_mine_index is None))
 
         return closest_mine_index
 
