@@ -395,8 +395,8 @@ class TeamCAMController(KesslerController):
         self.__closest_mine_remaining_time = ctrl.Antecedent(np.arange(self.__closest_mine_remaining_time_range[0], self.__closest_mine_remaining_time_range[1], 0.1), 'closest_mine_remaining_time')
         self.__closest_asteroid_distance = ctrl.Antecedent(np.arange(self.__closest_asteroid_distance_range[0], self.__closest_asteroid_distance_range[1], 1), 'closest_asteroid_distance')
         self.__greatest_threat_asteroid_threat_time = ctrl.Antecedent(np.arange(self.__greatest_threat_asteroid_threat_time_range[0], self.__greatest_threat_asteroid_threat_time_range[1], 0.01), 'greatest_threat_asteroid_threat_time')
-        self.__greatest_threat_asteroid_size = ctrl.Antecedent(np.arange(self.__greatest_threat_asteroid_size_range[0], self.__greatest_threat_asteroid_size_range[1], 1), 'greatest_threat_asteroid_size')
-        self.__closest_asteroid_size = ctrl.Antecedent(np.arange(self.__closest_asteroid_size_range[0], self.__closest_asteroid_size_range[1], 1), 'closest_asteroid_size')
+        self.__greatest_threat_asteroid_size = ctrl.Antecedent(np.arange(self.__greatest_threat_asteroid_size_range[0], self.__greatest_threat_asteroid_size_range[1], 0.1), 'greatest_threat_asteroid_size')
+        self.__closest_asteroid_size = ctrl.Antecedent(np.arange(self.__closest_asteroid_size_range[0], self.__closest_asteroid_size_range[1], 0.1), 'closest_asteroid_size')
 
         self.__asteroid_selection = ctrl.Consequent(np.arange(self.__asteroid_selection_range[0], self.__asteroid_selection_range[1], 0.1), 'asteroid_selection')
         self.__ship_turn = ctrl.Consequent(np.arange(self.__ship_turn_range[0], self.__ship_turn_range[1], 1), 'ship_turn')
@@ -426,11 +426,11 @@ class TeamCAMController(KesslerController):
         assert (self.__ship_thrust is not None)
 
         greatest_threat_asteroid_threat_time_gene: Gene = self.__converted_chromosome["greatest_threat_asteroid_threat_time"]
-        self.__greatest_threat_asteroid_threat_time['XS'] = fuzz.trimf(self.__greatest_threat_asteroid_threat_time.universe, greatest_threat_asteroid_threat_time_gene["S"])
+        self.__greatest_threat_asteroid_threat_time['XS'] = fuzz.trimf(self.__greatest_threat_asteroid_threat_time.universe, greatest_threat_asteroid_threat_time_gene["XS"])
         self.__greatest_threat_asteroid_threat_time['S'] = fuzz.trimf(self.__greatest_threat_asteroid_threat_time.universe, greatest_threat_asteroid_threat_time_gene["S"])
         self.__greatest_threat_asteroid_threat_time['M'] = fuzz.trimf(self.__greatest_threat_asteroid_threat_time.universe, greatest_threat_asteroid_threat_time_gene["M"])
         self.__greatest_threat_asteroid_threat_time['L'] = fuzz.trimf(self.__greatest_threat_asteroid_threat_time.universe, greatest_threat_asteroid_threat_time_gene["L"])
-        self.__greatest_threat_asteroid_threat_time['XL'] = fuzz.trimf(self.__greatest_threat_asteroid_threat_time.universe, greatest_threat_asteroid_threat_time_gene["L"])
+        self.__greatest_threat_asteroid_threat_time['XL'] = fuzz.trimf(self.__greatest_threat_asteroid_threat_time.universe, greatest_threat_asteroid_threat_time_gene["XL"])
 
         # there are 4 possible asteroid sizes in the game
         greatest_threat_asteroid_size_gene: Gene = self.__converted_chromosome["greatest_threat_asteroid_size"]
@@ -1104,7 +1104,7 @@ class TeamCAMController(KesslerController):
             assert (asteroid_intercept is not None) # if it is None, something is wrong with self.__find_greatest_threat_asteroid()
             greatest_threat_asteroid_threat_time = asteroid_intercept[2]
 
-        self.__asteroid_select_simulation.input['greatest_threat_asteroid_threat_time'] = greatest_threat_asteroid_threat_time
+        self.__asteroid_select_simulation.input['greatest_threat_asteroid_threat_time'] = min(greatest_threat_asteroid_threat_time, 100)
         self.__asteroid_select_simulation.input['greatest_threat_asteroid_size'] = greatest_threat_asteroid_size
         self.__asteroid_select_simulation.input['closest_asteroid_size'] = closest_asteroid_size
         self.__asteroid_select_simulation.compute()
