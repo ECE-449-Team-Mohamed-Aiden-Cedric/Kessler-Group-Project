@@ -1253,10 +1253,14 @@ class TeamCAMController(KesslerController):
         # the real collision time is the smallest positive one of the two
         collision_time: float = -1
         if collision_time_candidate_1 < 0:
-            assert (collision_time_candidate_2 >= 0)
+            if collision_time_candidate_2 < 0:
+                # both collision times are negative, so the objects don't collide in the future
+                return None
             collision_time = collision_time_candidate_2
         elif collision_time_candidate_2 < 0:
-            assert (collision_time_candidate_1 >= 0)
+            if collision_time_candidate_1 < 0:
+                # both collision times are negative, so the objects don't collide in the future
+                return None
             collision_time = collision_time_candidate_1
         else:
             collision_time = min(collision_time_candidate_1, collision_time_candidate_2)
