@@ -15,7 +15,6 @@ from skfuzzy import control as ctrl
 import math
 import numpy as np
 import config as config
-from logger import Logger
 
 from gene import Gene
 from chromosome import Chromosome
@@ -24,24 +23,33 @@ from converted_chromosome import ConvertedChromosome
 class TeamCAMController(KesslerController): 
     def __init__(self, chromosome: Chromosome):
         self.__current_frame = 0
-        
-        self.__logger: Logger = Logger(config.LOG_FILE_PATH)
 
         bullet_time: ctrl.Antecedent
         theta_delta: ctrl.Antecedent
+        ship_speed: ctrl.Antecedent
+        ship_stopping_distance: ctrl.Antecedent
+        mine_distance: ctrl.Antecedent
+        asteroid_distance: ctrl.Antecedent
         ship_turn: ctrl.Consequent
         ship_fire: ctrl.Consequent
+        drop_mine: ctrl.Consequent
+        ship_thrust: ctrl.Consequent
 
         self.__bullet_time_range: tuple[float, float] = (0, 1)
         self.__theta_delta_range: tuple[float, float] = (-1*math.pi/30, math.pi/30) # Radians due to Python
+        self.__ship_speed_range: tuple[float, float] = (-240, 240) # m/s
+        self.__ship_stopping_distance_range: tuple[float, float] = (0, 60) # m
+        self.__mine_distance_range: tuple[float, float] = (0, 1000) # m
+        self.__asteroid_distance_range: tuple[float, float] = (0, 1000) # m
         self.__ship_turn_range: tuple[float, float] = (-180, 180) # Degrees due to Kessler
         self.__ship_fire_range: tuple[float, float] = (-1, 1)
+        self.__ship_drop_mine_range: tuple[float, float] = (-1, 1)
+        self.__ship_thrust_range: tuple[float, float] = (-480.0, 480.0) # m/s^2
 
         converted_chromosome: ConvertedChromosome = self.__convert_chromosome(chromosome)
-        self.__logger.log(f"converted_chromosome: {converted_chromosome}")
 
-        bullet_time, theta_delta, ship_turn, ship_fire= self.__setup_fuzzy_sets(converted_chromosome)
-        self.__rules: list[ctrl.Rule] = self.__get_rules(bullet_time, theta_delta, ship_turn, ship_fire)
+        bullet_time, theta_delta, ship_speed, ship_stopping_distance, mine_distance, asteroid_distance, ship_turn, ship_fire, drop_mine, ship_thrust = self.__setup_fuzzy_sets(converted_chromosome)
+        self.__rules: list[ctrl.Rule] = self.__get_rules(bullet_time, theta_delta, ship_speed, ship_stopping_distance, mine_distance, asteroid_distance, ship_turn, ship_fire, drop_mine, ship_thrust)
 
         targeting_control = ctrl.ControlSystem(self.__rules)
         self.__control_system_simulation = ctrl.ControlSystemSimulation(
@@ -124,11 +132,111 @@ class TeamCAMController(KesslerController):
             self.__ship_fire_range[1]
         )
 
+        values: list[float] = chromosome_list[19:21]
+        values.extend([-0.01, 1.01])
+        values = sorted(values)
+        drop_mine_gene: Gene = { # type: ignore
+            "N": tuple(values[0:3]),
+            "Y": tuple(values[1:4])
+        }
+        drop_mine_gene = self.__scale_gene(
+            drop_mine_gene,
+            self.__ship_drop_mine_range[0],
+            self.__ship_drop_mine_range[1]
+        )
+
+        values: list[float] = chromosome_list[21:28]
+        values.extend([-0.01, 1.01])
+        values = sorted(values)
+        ship_thrust_gene: Gene = { # type: ignore
+            "NL": tuple(values[0:3]),
+            "NM": tuple(values[1:4]),
+            "NS": tuple(values[2:5]),
+            "Z": tuple(values[3:6]),
+            "PS": tuple(values[4:7]),
+            "PM": tuple(values[5:8]),
+            "PL": tuple(values[6:9])
+        }
+        ship_thrust_gene = self.__scale_gene(
+            ship_thrust_gene,
+            self.__ship_turn_range[0],
+            self.__ship_turn_range[1]
+        )
+
+        values: list[float] = chromosome_list[28:35]
+        values.extend([-0.01, 1.01])
+        values = sorted(values)
+        ship_speed_gene: Gene = { # type: ignore
+            "NL": tuple(values[0:3]),
+            "NM": tuple(values[1:4]),
+            "NS": tuple(values[2:5]),
+            "Z": tuple(values[3:6]),
+            "PS": tuple(values[4:7]),
+            "PM": tuple(values[5:8]),
+            "PL": tuple(values[6:9])
+        }
+        ship_speed_gene = self.__scale_gene(
+            ship_speed_gene,
+            self.__ship_speed_range[0],
+            self.__ship_speed_range[1]
+        )
+
+        values: list[float] = chromosome_list[35:39]
+        values.extend([-0.01, 1.01])
+        values = sorted(values)
+        ship_stopping_distance_gene: Gene = { # type: ignore
+            "Z": tuple(values[0:3]),
+            "PS": tuple(values[1:4]),
+            "PM": tuple(values[2:5]),
+            "PL": tuple(values[3:6])
+        }
+        ship_stopping_distance_gene = self.__scale_gene(
+            ship_stopping_distance_gene,
+            self.__ship_stopping_distance_range[0],
+            self.__ship_stopping_distance_range[1]
+        )
+
+        values: list[float] = chromosome_list[39:43]
+        values.extend([-0.01, 1.01])
+        values = sorted(values)
+        mine_distance_gene: Gene = { # type: ignore
+            "Z": tuple(values[0:3]),
+            "PS": tuple(values[1:4]),
+            "PM": tuple(values[2:5]),
+            "PL": tuple(values[3:6])
+        }
+        mine_distance_gene = self.__scale_gene(
+            mine_distance_gene,
+            self.__mine_distance_range[0],
+            self.__mine_distance_range[1]
+        )
+
+        values: list[float] = chromosome_list[43:47]
+        values.extend([-0.01, 1.01])
+        values = sorted(values)
+        asteroid_distance_gene: Gene = { # type: ignore
+            "Z": tuple(values[0:3]),
+            "PS": tuple(values[1:4]),
+            "PM": tuple(values[2:5]),
+            "PL": tuple(values[3:6])
+        }
+        asteroid_distance_gene = self.__scale_gene(
+            asteroid_distance_gene,
+            self.__asteroid_distance_range[0],
+            self.__asteroid_distance_range[1]
+        )
+
         converted_chromosome: ConvertedChromosome = {
             "bullet_time": bullet_time_gene,
             "theta_delta": theta_delta_gene,
+            "ship_speed": ship_speed_gene,
+            "ship_stopping_distance": ship_stopping_distance_gene,
+            "mine_distance": mine_distance_gene,
+            "asteroid_distance": asteroid_distance_gene,
             "ship_turn": ship_turn_gene,
-            "ship_fire": ship_fire_gene
+            "ship_fire": ship_fire_gene,
+            "drop_mine": drop_mine_gene,
+            "ship_thrust": ship_thrust_gene
         }
 
         return converted_chromosome
@@ -141,7 +249,7 @@ class TeamCAMController(KesslerController):
 
         return scaled_gene
 
-    def __setup_fuzzy_sets(self, chromosome: ConvertedChromosome) -> tuple[ctrl.Antecedent, ctrl.Antecedent, ctrl.Consequent, ctrl.Consequent]:
+    def __setup_fuzzy_sets(self, chromosome: ConvertedChromosome) -> tuple[ctrl.Antecedent, ctrl.Antecedent, ctrl.Antecedent, ctrl.Antecedent, ctrl.Antecedent, ctrl.Antecedent, ctrl.Consequent, ctrl.Consequent, ctrl.Consequent, ctrl.Consequent]:
         """sets up the fuzzy sets with the genes defined in the Chromosome
 
         Args:
@@ -150,10 +258,16 @@ class TeamCAMController(KesslerController):
         Returns:
             tuple[ctrl.Antecedent, ctrl.Antecedent, ctrl.Consequent, ctrl.Consequent]: bullet_time, theta_delta, ship_turn, ship_fire
         """
-        bullet_time: ctrl.Antecedent = ctrl.Antecedent(np.arange(self.__bullet_time_range[0], self.__bullet_time_range[1], 0.002), 'bullet_time')
+        bullet_time: ctrl.Antecedent = ctrl.Antecedent(np.arange(self.__bullet_time_range[0], self.__bullet_time_range[1], 0.01), 'bullet_time')
         theta_delta: ctrl.Antecedent = ctrl.Antecedent(np.arange(self.__theta_delta_range[0], self.__theta_delta_range[1], 0.1), 'theta_delta')
+        ship_speed: ctrl.Antecedent = ctrl.Antecedent(np.arange(self.__ship_speed_range[0], self.__ship_speed_range[1], 5), 'ship_speed')
+        ship_stopping_distance: ctrl.Antecedent = ctrl.Antecedent(np.arange(self.__ship_stopping_distance_range[0], self.__ship_stopping_distance_range[1], 1), 'ship_stopping_distance')
+        mine_distance: ctrl.Antecedent = ctrl.Antecedent(np.arange(self.__mine_distance_range[0], self.__mine_distance_range[1], 1), 'mine_distance')
+        asteroid_distance: ctrl.Antecedent = ctrl.Antecedent(np.arange(self.__asteroid_distance_range[0], self.__asteroid_distance_range[1], 1), 'asteroid_distance')
         ship_turn: ctrl.Consequent = ctrl.Consequent(np.arange(self.__ship_turn_range[0], self.__ship_turn_range[1], 1), 'ship_turn')
         ship_fire: ctrl.Consequent = ctrl.Consequent(np.arange(self.__ship_fire_range[0], self.__ship_fire_range[1], 0.1), 'ship_fire')
+        drop_mine: ctrl.Consequent = ctrl.Consequent(np.arange(self.__ship_drop_mine_range[0], self.__ship_drop_mine_range[1], 0.1), 'drop_mine')
+        ship_thrust: ctrl.Consequent = ctrl.Consequent(np.arange(self.__ship_thrust_range[0], self.__ship_thrust_range[1], 5), 'ship_thrust')
 
         #Declare fuzzy sets for bullet_time (how long it takes for the bullet to reach the intercept point)
         bullet_time_gene: Gene = chromosome["bullet_time"]
@@ -172,6 +286,33 @@ class TeamCAMController(KesslerController):
         theta_delta['PM'] = fuzz.trimf(theta_delta.universe, theta_delta_gene["PM"])
         theta_delta['PL'] = fuzz.trimf(theta_delta.universe, theta_delta_gene["PL"])
 
+        ship_speed_gene: Gene = chromosome["ship_speed"]
+        ship_speed['NL'] = fuzz.trimf(ship_speed.universe, ship_speed_gene["NL"])
+        ship_speed['NM'] = fuzz.trimf(ship_speed.universe, ship_speed_gene["NM"])
+        ship_speed['NS'] = fuzz.trimf(ship_speed.universe, ship_speed_gene["NS"])
+        ship_speed['Z']  = fuzz.trimf(ship_speed.universe, ship_speed_gene["Z"])
+        ship_speed['PS'] = fuzz.trimf(ship_speed.universe, ship_speed_gene["PS"])
+        ship_speed['PM'] = fuzz.trimf(ship_speed.universe, ship_speed_gene["PM"])
+        ship_speed['PL'] = fuzz.trimf(ship_speed.universe, ship_speed_gene["PL"])
+
+        ship_stopping_distance_gene: Gene = chromosome["ship_stopping_distance"]
+        ship_stopping_distance['Z']  = fuzz.trimf(ship_stopping_distance.universe, ship_stopping_distance_gene["Z"])
+        ship_stopping_distance['PS'] = fuzz.trimf(ship_stopping_distance.universe, ship_stopping_distance_gene["PS"])
+        ship_stopping_distance['PM'] = fuzz.trimf(ship_stopping_distance.universe, ship_stopping_distance_gene["PM"])
+        ship_stopping_distance['PL'] = fuzz.trimf(ship_stopping_distance.universe, ship_stopping_distance_gene["PL"])
+
+        mine_distance_gene: Gene = chromosome["mine_distance"]
+        mine_distance['Z']  = fuzz.trimf(mine_distance.universe, mine_distance_gene["Z"])
+        mine_distance['PS'] = fuzz.trimf(mine_distance.universe, mine_distance_gene["PS"])
+        mine_distance['PM'] = fuzz.trimf(mine_distance.universe, mine_distance_gene["PM"])
+        mine_distance['PL'] = fuzz.trimf(mine_distance.universe, mine_distance_gene["PL"])
+
+        asteroid_distance_gene: Gene = chromosome["asteroid_distance"]
+        asteroid_distance['Z']  = fuzz.trimf(asteroid_distance.universe, asteroid_distance_gene["Z"])
+        asteroid_distance['PS'] = fuzz.trimf(asteroid_distance.universe, asteroid_distance_gene["PS"])
+        asteroid_distance['PM'] = fuzz.trimf(asteroid_distance.universe, asteroid_distance_gene["PM"])
+        asteroid_distance['PL'] = fuzz.trimf(asteroid_distance.universe, asteroid_distance_gene["PL"])
+
         # Declare fuzzy sets for the ship_turn consequent; this will be returned as turn_rate.
         # Hard-coded for a game step of 1/30 seconds
         ship_turn_gene: Gene = chromosome["ship_turn"]
@@ -189,38 +330,95 @@ class TeamCAMController(KesslerController):
         ship_fire['N'] = fuzz.trimf(ship_fire.universe, ship_fire_gene["N"])
         ship_fire['Y'] = fuzz.trimf(ship_fire.universe, ship_fire_gene["Y"])
 
-        return (bullet_time, theta_delta, ship_turn, ship_fire)
+        drop_mine_gene: Gene = chromosome["drop_mine"]
+        drop_mine['N'] = fuzz.trimf(drop_mine.universe, drop_mine_gene["N"])
+        drop_mine['Y'] = fuzz.trimf(drop_mine.universe, drop_mine_gene["Y"])
+
+        ship_thrust_gene: Gene = chromosome["ship_thrust"]
+        ship_thrust['NL'] = fuzz.trimf(ship_thrust.universe, ship_thrust_gene["NL"])
+        ship_thrust['NM'] = fuzz.trimf(ship_thrust.universe, ship_thrust_gene["NM"])
+        ship_thrust['NS'] = fuzz.trimf(ship_thrust.universe, ship_thrust_gene["NS"])
+        ship_thrust['Z']  = fuzz.trimf(ship_thrust.universe, ship_thrust_gene["Z"])
+        ship_thrust['PS'] = fuzz.trimf(ship_thrust.universe, ship_thrust_gene["PS"])
+        ship_thrust['PM'] = fuzz.trimf(ship_thrust.universe, ship_thrust_gene["PM"])
+        ship_thrust['PL'] = fuzz.trimf(ship_thrust.universe, ship_thrust_gene["PL"])
+
+        return (bullet_time, theta_delta, ship_speed, ship_stopping_distance, mine_distance, asteroid_distance, ship_turn, ship_fire, drop_mine, ship_thrust)
 
     @staticmethod
     def __get_rules(
             bullet_time: ctrl.Antecedent,
             theta_delta: ctrl.Antecedent,
+            ship_speed: ctrl.Antecedent,
+            ship_stopping_distance: ctrl.Antecedent,
+            mine_distance: ctrl.Antecedent,
+            asteroid_distance: ctrl.Antecedent,
             ship_turn: ctrl.Consequent,
-            ship_fire: ctrl.Consequent
+            ship_fire: ctrl.Consequent,
+            drop_mine: ctrl.Consequent,
+            ship_thrust: ctrl.Consequent
         ) -> list[ctrl.Rule]:
 
         rules: list[ctrl.Rule] = [
-            ctrl.Rule(bullet_time['L'] & theta_delta['NL'], (ship_turn['NL'], ship_fire['Y'])),
-            ctrl.Rule(bullet_time['L'] & theta_delta['NM'], (ship_turn['NM'], ship_fire['Y'])),
-            ctrl.Rule(bullet_time['L'] & theta_delta['NS'], (ship_turn['NS'], ship_fire['Y'])),
-            ctrl.Rule(bullet_time['L'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y'])),
-            ctrl.Rule(bullet_time['L'] & theta_delta['PS'], (ship_turn['PS'], ship_fire['Y'])),
-            ctrl.Rule(bullet_time['L'] & theta_delta['PM'], (ship_turn['PM'], ship_fire['Y'])),
-            ctrl.Rule(bullet_time['L'] & theta_delta['PL'], (ship_turn['PL'], ship_fire['Y'])),
-            ctrl.Rule(bullet_time['M'] & theta_delta['NL'], (ship_turn['NL'], ship_fire['Y'])),
-            ctrl.Rule(bullet_time['M'] & theta_delta['NM'], (ship_turn['NM'], ship_fire['Y'])),
-            ctrl.Rule(bullet_time['M'] & theta_delta['NS'], (ship_turn['NS'], ship_fire['Y'])),
-            ctrl.Rule(bullet_time['M'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y'])),
-            ctrl.Rule(bullet_time['M'] & theta_delta['PS'], (ship_turn['PS'], ship_fire['Y'])),
-            ctrl.Rule(bullet_time['M'] & theta_delta['PM'], (ship_turn['PM'], ship_fire['Y'])),
-            ctrl.Rule(bullet_time['M'] & theta_delta['PL'], (ship_turn['PL'], ship_fire['Y'])),
-            ctrl.Rule(bullet_time['S'] & theta_delta['NL'], (ship_turn['NL'], ship_fire['Y'])),
-            ctrl.Rule(bullet_time['S'] & theta_delta['NM'], (ship_turn['NM'], ship_fire['Y'])),
-            ctrl.Rule(bullet_time['S'] & theta_delta['NS'], (ship_turn['NS'], ship_fire['Y'])),
-            ctrl.Rule(bullet_time['S'] & theta_delta['Z'], (ship_turn['Z'], ship_fire['Y'])),
-            ctrl.Rule(bullet_time['S'] & theta_delta['PS'], (ship_turn['PS'], ship_fire['Y'])),
-            ctrl.Rule(bullet_time['S'] & theta_delta['PM'], (ship_turn['PM'], ship_fire['Y'])),
-            ctrl.Rule(bullet_time['S'] & theta_delta['PL'], (ship_turn['PL'], ship_fire['Y']))
+            ctrl.Rule(theta_delta['NL'], (ship_turn['NL'], ship_fire['N'])),
+            ctrl.Rule(theta_delta['NM'], (ship_turn['NM'], ship_fire['N'])),
+            ctrl.Rule(theta_delta['NS'] & (bullet_time['S'] | bullet_time['M']), (ship_turn['NS'], ship_fire['Y'])),
+            ctrl.Rule(theta_delta['NS'] & bullet_time['L'], (ship_turn['NS'], ship_fire['N'])),
+            ctrl.Rule(theta_delta['Z'] & (bullet_time['S'] | bullet_time['M']), (ship_turn['Z'], ship_fire['Y'])),
+            ctrl.Rule(theta_delta['Z'] & bullet_time['L'], (ship_turn['Z'], ship_fire['N'])),
+            ctrl.Rule(theta_delta['PS'] & (bullet_time['S'] | bullet_time['M']), (ship_turn['PS'], ship_fire['Y'])),
+            ctrl.Rule(theta_delta['PS'] & bullet_time['L'], (ship_turn['PS'], ship_fire['N'])),
+            ctrl.Rule(theta_delta['PM'], (ship_turn['PM'], ship_fire['N'])),
+            ctrl.Rule(theta_delta['PL'], (ship_turn['PL'], ship_fire['N'])),
+
+            ctrl.Rule(ship_stopping_distance['PL'] & asteroid_distance['Z'], ship_thrust['NL']),
+            ctrl.Rule(ship_stopping_distance['PL'] & asteroid_distance['PS'], ship_thrust['NL']),
+            ctrl.Rule(ship_stopping_distance['PL'] & asteroid_distance['PM'] & (mine_distance['Z'] | mine_distance['PS']), ship_thrust['NL']),
+            ctrl.Rule(ship_stopping_distance['PL'] & asteroid_distance['PM'] & (mine_distance['PM'] | mine_distance['PL']), ship_thrust['NM']),
+            ctrl.Rule(ship_stopping_distance['PL'] & asteroid_distance['PL'] & mine_distance['Z'], ship_thrust['NL']),
+            ctrl.Rule(ship_stopping_distance['PL'] & asteroid_distance['PL'] & mine_distance['PS'], ship_thrust['NM']),
+            ctrl.Rule(ship_stopping_distance['PL'] & asteroid_distance['PL'] & (mine_distance['PM'] | mine_distance['PL']), ship_thrust['NS']),
+            ctrl.Rule(ship_stopping_distance['PM'] & asteroid_distance['Z'] & (mine_distance['Z'] | mine_distance['PS']), ship_thrust['NL']),
+            ctrl.Rule(ship_stopping_distance['PM'] & asteroid_distance['Z'] & (mine_distance['PM'] | mine_distance['PL']), ship_thrust['NM']),
+            ctrl.Rule(ship_stopping_distance['PM'] & asteroid_distance['PS'] & (mine_distance['Z'] | mine_distance['PS']), ship_thrust['NL']),
+            ctrl.Rule(ship_stopping_distance['PM'] & asteroid_distance['PS'] & (mine_distance['PM'] | mine_distance['PL']), ship_thrust['NM']),
+            ctrl.Rule(ship_stopping_distance['PM'] & asteroid_distance['PM'] & mine_distance['Z'], ship_thrust['NL']),
+            ctrl.Rule(ship_stopping_distance['PM'] & asteroid_distance['PM'] & mine_distance['PS'], ship_thrust['NM']),
+            ctrl.Rule(ship_stopping_distance['PM'] & asteroid_distance['PM'] & (mine_distance['PM'] | mine_distance['PL']), ship_thrust['NS']),
+            ctrl.Rule(ship_stopping_distance['PM'] & asteroid_distance['PL'] & mine_distance['Z'], ship_thrust['PL']),
+            ctrl.Rule(ship_stopping_distance['PM'] & asteroid_distance['PL'] & mine_distance['PS'], ship_thrust['PS']),
+            ctrl.Rule(ship_stopping_distance['PM'] & asteroid_distance['PL'] & (mine_distance['PM'] | mine_distance['PL']), ship_thrust['PS']),
+            ctrl.Rule(ship_stopping_distance['PS'] & asteroid_distance['Z'] & mine_distance['Z'], ship_thrust['NL']),
+            ctrl.Rule(ship_stopping_distance['PS'] & asteroid_distance['Z'] & mine_distance['PS'], ship_thrust['NM']),
+            ctrl.Rule(ship_stopping_distance['PS'] & asteroid_distance['Z'] & (mine_distance['PM'] | mine_distance['PL']), ship_thrust['NS']),
+            ctrl.Rule(ship_stopping_distance['PS'] & asteroid_distance['PS'] & mine_distance['Z'], ship_thrust['NL']),
+            ctrl.Rule(ship_stopping_distance['PS'] & asteroid_distance['PS'] & mine_distance['PS'], ship_thrust['NM']),
+            ctrl.Rule(ship_stopping_distance['PS'] & asteroid_distance['PS'] & (mine_distance['PM'] | mine_distance['PL']), ship_thrust['NS']),
+            ctrl.Rule(ship_stopping_distance['PS'] & asteroid_distance['PM'] & mine_distance['Z'], ship_thrust['PL']),
+            ctrl.Rule(ship_stopping_distance['PS'] & asteroid_distance['PM'] & mine_distance['PS'], ship_thrust['PS']),
+            ctrl.Rule(ship_stopping_distance['PS'] & asteroid_distance['PM'] & (mine_distance['PM'] | mine_distance['PL']), ship_thrust['PS']),
+            ctrl.Rule(ship_stopping_distance['PS'] & asteroid_distance['PL'] & mine_distance['Z'], ship_thrust['PL']),
+            ctrl.Rule(ship_stopping_distance['PS'] & asteroid_distance['PL'] & mine_distance['PS'], ship_thrust['PM']),
+            ctrl.Rule(ship_stopping_distance['PS'] & asteroid_distance['PL'] & (mine_distance['PM'] | mine_distance['PL']), ship_thrust['PS']),
+            ctrl.Rule(ship_stopping_distance['Z'] & asteroid_distance['Z'] & mine_distance['Z'], ship_thrust['NL']),
+            ctrl.Rule(ship_stopping_distance['Z'] & asteroid_distance['Z'] & mine_distance['PS'], ship_thrust['NL']),
+            ctrl.Rule(ship_stopping_distance['Z'] & asteroid_distance['Z'] & (mine_distance['PM'] | mine_distance['PL']), ship_thrust['NL']),
+            ctrl.Rule(ship_stopping_distance['Z'] & asteroid_distance['PS'] & mine_distance['Z'], ship_thrust['NL']),
+            ctrl.Rule(ship_stopping_distance['Z'] & asteroid_distance['PS'] & mine_distance['PS'], ship_thrust['NL']),
+            ctrl.Rule(ship_stopping_distance['Z'] & asteroid_distance['PS'] & (mine_distance['PM'] | mine_distance['PL']), ship_thrust['NL']),
+            ctrl.Rule(ship_stopping_distance['Z'] & asteroid_distance['PM'] & mine_distance['Z'], ship_thrust['PL']),
+            ctrl.Rule(ship_stopping_distance['Z'] & asteroid_distance['PM'] & mine_distance['PS'], ship_thrust['PM']),
+            ctrl.Rule(ship_stopping_distance['Z'] & asteroid_distance['PM'] & (mine_distance['PM'] | mine_distance['PL']), ship_thrust['PS']),
+            ctrl.Rule(ship_stopping_distance['Z'] & asteroid_distance['PL'] & (mine_distance['Z'] | mine_distance['PS']), ship_thrust['PL']),
+            ctrl.Rule(ship_stopping_distance['Z'] & asteroid_distance['PL'] & (mine_distance['PM'] | mine_distance['PL']), ship_thrust['PM']),
+
+            ctrl.Rule(ship_speed['NL'], drop_mine['Y']),
+            ctrl.Rule(ship_speed['NM'], drop_mine['Y']),
+            ctrl.Rule(ship_speed['NS'], drop_mine['N']),
+            ctrl.Rule(ship_speed['Z'], drop_mine['N']),
+            ctrl.Rule(ship_speed['PS'], drop_mine['N']),
+            ctrl.Rule(ship_speed['PM'], drop_mine['Y']),
+            ctrl.Rule(ship_speed['PL'], drop_mine['Y']),
         ]
 
         return rules
@@ -247,7 +445,34 @@ class TeamCAMController(KesslerController):
 
         # Find the closest asteroid (disregards asteroid velocity)
         ship_pos_x: float = ship_state["position"][0]     # See src/kesslergame/ship.py in the KesslerGame Github
-        ship_pos_y: float = ship_state["position"][1]       
+        ship_pos_y: float = ship_state["position"][1]    
+
+        ship_speed: float = ship_state["speed"]
+        stopping_time: float = abs(ship_speed / self.__ship_thrust_range[0])
+        stopping_distance: float = (abs(ship_speed) * stopping_time) + (self.__ship_thrust_range[0] * (stopping_time**2) / 2)
+
+        assert (stopping_distance >= 0)
+
+        closest_mine: None | dict = None
+        for mine in game_state["mines"]:
+            #Loop through all asteroids, find minimum Eudlidean distance
+            curr_dist: float = math.sqrt((ship_pos_x - mine["position"][0])**2 + (ship_pos_y - mine["position"][1])**2)
+            if closest_mine is None :
+                # Does not yet exist, so initialize first asteroid as the minimum. Ugh, how to do?
+                closest_mine = dict(mine = mine, dist = curr_dist)
+
+            else:    
+                # closest_asteroid exists, and is thus initialized. 
+                if closest_mine["dist"] > curr_dist:
+                    # New minimum found
+                    closest_mine["mine"] = mine
+                    closest_mine["dist"] = curr_dist
+
+        if closest_mine is None:
+            # there were no mines on the field
+            closest_mine = dict(mine = None, dist = self.__mine_distance_range[1])
+        closest_mine_distance: float = closest_mine["dist"]
+
         closest_asteroid: None | dict = None
 
         for a in game_state["asteroids"]:
@@ -273,6 +498,7 @@ class TeamCAMController(KesslerController):
         #    and the angle of the asteroid's current movement.
         # REMEMBER TRIG FUNCTIONS ARE ALL IN RADAINS!!!
 
+        closest_asteroid_distance: float = closest_asteroid["dist"]
 
         asteroid_ship_x: float = ship_pos_x - closest_asteroid["aster"]["position"][0]
         asteroid_ship_y: float = ship_pos_y - closest_asteroid["aster"]["position"][1]
@@ -323,36 +549,34 @@ class TeamCAMController(KesslerController):
         # Pass the inputs to the rulebase and fire it
         self.__control_system_simulation.input['bullet_time'] = bullet_t
         self.__control_system_simulation.input['theta_delta'] = shooting_theta
+        self.__control_system_simulation.input['ship_speed'] = ship_speed
+        self.__control_system_simulation.input['ship_stopping_distance'] = stopping_distance
+        self.__control_system_simulation.input['mine_distance'] = closest_mine_distance
+        self.__control_system_simulation.input['asteroid_distance'] = closest_asteroid_distance
 
         self.__control_system_simulation.compute()
 
         # Get the defuzzified outputs
         turn_rate: float = self.__control_system_simulation.output['ship_turn']
 
+        fire: bool
         if self.__control_system_simulation.output['ship_fire'] >= 0:
             fire = True
         else:
             fire = False
 
-        ## Aiden Teal code, will eventually move to its own controller
-        thrust = 50
+        drop_mine: bool
+        if self.__control_system_simulation.output['drop_mine'] >= 0:
+            drop_mine = True
+        else:
+            drop_mine = False
 
-        # And return your three outputs to the game simulation. Controller algorithm complete.
-        #thrust = 0.0
-
-        drop_mine = False
+        thrust: float = self.__control_system_simulation.output['ship_thrust']
 
         self.__current_frame +=1
-
-        #DEBUG
-        self.__logger.log(
-            "Simulation Results\n\tThrust: {:d}\n\tBullet Time: {:.3f}\n\tShooting Theta: {:.3f}\n\tTurn Rate: {:.2f}\n\tFire: {}".format(
-                thrust, bullet_t, shooting_theta, turn_rate, fire
-            )
-        )
 
         return thrust, turn_rate, fire, drop_mine
 
     @property
     def name(self) -> str:
-        return "ScottDick Controller"
+        return "Team CAM Controller"
