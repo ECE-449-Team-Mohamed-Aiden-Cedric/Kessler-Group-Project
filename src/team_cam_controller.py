@@ -54,7 +54,7 @@ class TeamCAMController(KesslerController):
         self.__greatest_threat_asteroid_size_range: tuple[float, float] = (0, 4)
         self.__closest_asteroid_size_range: tuple[float, float] = (0, 4)
         self.__ship_distance_from_nearest_edge_range: tuple[float, float] = (0, 1) # gets set correctly on first iteration of game (once the map size is known)
-        self.__target_ship_firing_heading_delta_range: tuple[float, float] = (-1*pi/30, pi/30) # Radians due to Python
+        self.__target_ship_firing_heading_delta_range: tuple[float, float] = (-pi, pi) # Radians due to Python
         self.__ship_speed_range: tuple[float, float] = (-240, 240) # m/s
         self.__ship_stopping_distance_range: tuple[float, float] = (0, 60) # m
         self.__closest_mine_distance_range: tuple[float, float] = (0, 1000) # m
@@ -388,7 +388,7 @@ class TeamCAMController(KesslerController):
 
     def __setup_antecedents_and_consequents(self) -> None:
         self.__ship_distance_from_nearest_edge = ctrl.Antecedent(np.arange(self.__ship_distance_from_nearest_edge_range[0], self.__ship_distance_from_nearest_edge_range[1], 1), 'ship_distance_from_nearest_edge')
-        self.__target_ship_firing_heading_delta = ctrl.Antecedent(np.arange(self.__target_ship_firing_heading_delta_range[0], self.__target_ship_firing_heading_delta_range[1], 0.1), 'target_ship_firing_heading_delta')
+        self.__target_ship_firing_heading_delta = ctrl.Antecedent(np.arange(self.__target_ship_firing_heading_delta_range[0], self.__target_ship_firing_heading_delta_range[1], 0.01), 'target_ship_firing_heading_delta')
         self.__ship_speed = ctrl.Antecedent(np.arange(self.__ship_speed_range[0], self.__ship_speed_range[1], 5), 'ship_speed')
         self.__ship_stopping_distance = ctrl.Antecedent(np.arange(self.__ship_stopping_distance_range[0], self.__ship_stopping_distance_range[1], 1), 'ship_stopping_distance')
         self.__closest_mine_distance = ctrl.Antecedent(np.arange(self.__closest_mine_distance_range[0], self.__closest_mine_distance_range[1], 1), 'closest_mine_distance')
@@ -1111,12 +1111,17 @@ class TeamCAMController(KesslerController):
 
         selected_asteroid_position: tuple[float, float]
         selected_asteroid_velocity: tuple[float, float]
-        if (greatest_threat_asteroid is None or self.__asteroid_select_simulation.output['asteroid_selection'] < 0):
+        try:
+            if (greatest_threat_asteroid is None or self.__asteroid_select_simulation.output['asteroid_selection'] < 0):
+                selected_asteroid_position = closest_asteroid_position
+                selected_asteroid_velocity = closest_asteroid_velocity
+            else:
+                selected_asteroid_position = greatest_threat_asteroid_position
+                selected_asteroid_velocity = greatest_threat_asteroid_velocity
+        except KeyError:
+            print("error in asteroid selection")
             selected_asteroid_position = closest_asteroid_position
             selected_asteroid_velocity = closest_asteroid_velocity
-        else:
-            selected_asteroid_position = greatest_threat_asteroid_position
-            selected_asteroid_velocity = greatest_threat_asteroid_velocity
 
         bullet_speed: float = 800
         target_ship_firing_heading: float = self.__calculate_bullet_intercept(ship_position, bullet_speed, selected_asteroid_position, selected_asteroid_velocity)
@@ -1138,12 +1143,17 @@ class TeamCAMController(KesslerController):
         self.__ship_thrust_simulation.input['closest_asteroid_distance'] = closest_asteroid_distance
 
         self.__ship_fire_simulation.compute()
-        self.__ship_turn_simulation.compute()
+        try:
+            self.__ship_turn_simulation.compute()
+            turn_rate: float = self.__ship_turn_simulation.output['ship_turn']
+        except ValueError:
+            print("error in ship_turn_simulation")
+            turn_rate: float = 0
+
         self.__drop_mine_simulation.compute()
         self.__ship_thrust_simulation.compute()
 
         # Get the defuzzified outputs
-        turn_rate: float = self.__ship_turn_simulation.output['ship_turn']
 
         fire: bool
         if self.__ship_fire_simulation.output['ship_fire'] >= 0:
