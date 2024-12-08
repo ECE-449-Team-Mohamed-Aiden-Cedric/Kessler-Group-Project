@@ -45,10 +45,10 @@ def fitness_score_function(score: Score, scenario: Scenario) -> float:
     remaining_time: float = scenario.time_limit - score.sim_time
     average_asteroids_hit_per_second: float = team_score.asteroids_hit / score.sim_time
 
-    fitness_score: float = (
-        team_score.asteroids_hit
-        + (remaining_time * average_asteroids_hit_per_second)
-    )
+    fitness_score: float = team_score.asteroids_hit - 30 * team_score.deaths
+
+    if (team_score.lives_remaining > 0):
+        fitness_score += (remaining_time * average_asteroids_hit_per_second)
 
     return fitness_score
 
