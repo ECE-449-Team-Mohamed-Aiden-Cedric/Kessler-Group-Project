@@ -63,26 +63,7 @@ def fitness(ga_instance: pygad.GA, chromosome: Chromosome, solution_idx: int) ->
     """
     final_fitness_score: float = 0
 
-    for seed in config.SEEDS:
-        scenario: Scenario = Scenario(
-            name = "Fitness Scenario",
-            num_asteroids = 10,
-            ship_states = [
-                {
-                    "position": (400, 400),
-                    "angle": 90,
-                    "lives": 3,
-                    "team": 1,
-                    "mines_remaining": 3
-                }
-            ],
-            map_size = (1000, 800),
-            time_limit = 60,
-            ammo_limit_multiplier = 0,
-            stop_if_no_ammo = False,
-            seed = seed
-        )
-
+    for scenario in config.SCENARIOS:
         controller: TeamCAMController = TeamCAMController(chromosome)
 
         game_settings: dict[str, Any] = {
@@ -103,7 +84,7 @@ def fitness(ga_instance: pygad.GA, chromosome: Chromosome, solution_idx: int) ->
 
         final_fitness_score += fitness_score_function(score)
 
-    final_fitness_score /= len(config.SEEDS)
+    final_fitness_score /= len(config.SCENARIOS)
 
     print(f"iteration fitness: {final_fitness_score}")
 
