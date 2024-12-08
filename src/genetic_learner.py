@@ -20,7 +20,7 @@ def execute_fuzzy_inference(
     kessler_game: KesslerGame,
     scenario: Scenario,
     controller: KesslerController
-    ) -> Team:
+    ) -> Score:
     """executes the fuzzy system and returns the results we care about
 
     Returns:
@@ -29,22 +29,25 @@ def execute_fuzzy_inference(
     score: Score
     score, _ = kessler_game.run(scenario=scenario, controllers=[controller])
 
-    team_score: Team = score.teams[0] # get this team's score (assuming we're the only team)
+    return score
 
-    return team_score
-
-def fitness_score_function(score: Team) -> float:
+def fitness_score_function(score: Score, scenario: Scenario) -> float:
     """function to compute a fitness score to be maximized
 
     Args:
-        score (Team): the Team object containing the score parameters from the game
+        score (Score): the Score object containing the score parameters from the game
 
     Returns:
         float: fitness score to be maximized
     """
+    team_score: Team = score.teams[0] # get this team's score (assuming we're the only team)
+
+    remaining_time: float = scenario.time_limit - score.sim_time
+    average_asteroids_hit_per_second: float = team_score.asteroids_hit / score.sim_time
+
     fitness_score: float = (
-        score.asteroids_hit * score.accuracy
-        + score.deaths * -30
+        team_score.asteroids_hit
+        + (remaining_time * average_asteroids_hit_per_second)
     )
 
     return fitness_score
@@ -80,9 +83,9 @@ def fitness(ga_instance: pygad.GA, chromosome: Chromosome, solution_idx: int) ->
         else:
             game = TrainerEnvironment(settings = game_settings)
 
-        score: Team = execute_fuzzy_inference(game, scenario, controller)
+        score: Score = execute_fuzzy_inference(game, scenario, controller)
 
-        final_fitness_score += fitness_score_function(score)
+        final_fitness_score += fitness_score_function(score, scenario)
 
     final_fitness_score /= len(config.SCENARIOS)
 
