@@ -15,7 +15,6 @@ from skfuzzy import control as ctrl
 import math
 import numpy as np
 import config as config
-from logger import Logger
 
 from gene import Gene
 from chromosome import Chromosome
@@ -24,8 +23,6 @@ from converted_chromosome import ConvertedChromosome
 class TeamCAMController(KesslerController): 
     def __init__(self, chromosome: Chromosome):
         self.__current_frame = 0
-        
-        self.__logger: Logger = Logger(config.LOG_FILE_PATH)
 
         bullet_time: ctrl.Antecedent
         theta_delta: ctrl.Antecedent
@@ -50,7 +47,6 @@ class TeamCAMController(KesslerController):
         self.__ship_thrust_range: tuple[float, float] = (-480.0, 480.0) # m/s^2
 
         converted_chromosome: ConvertedChromosome = self.__convert_chromosome(chromosome)
-        self.__logger.log(f"converted_chromosome: {converted_chromosome}")
 
         bullet_time, theta_delta, ship_speed, ship_stopping_distance, mine_distance, asteroid_distance, ship_turn, ship_fire, drop_mine, ship_thrust = self.__setup_fuzzy_sets(converted_chromosome)
         self.__rules: list[ctrl.Rule] = self.__get_rules(bullet_time, theta_delta, ship_speed, ship_stopping_distance, mine_distance, asteroid_distance, ship_turn, ship_fire, drop_mine, ship_thrust)
@@ -578,13 +574,6 @@ class TeamCAMController(KesslerController):
         thrust: float = self.__control_system_simulation.output['ship_thrust']
 
         self.__current_frame +=1
-
-        #DEBUG
-        #self.__logger.log(
-        #    "Simulation Results\n\tThrust: {:.1f}\n\tBullet Time: {:.3f}\n\tShooting Theta: {:.3f}\n\tTurn Rate: {:.2f}\n\tFire: {}\n\tDrop Mine: {}".format(
-        #        thrust, bullet_t, shooting_theta, turn_rate, fire, drop_mine
-        #    )
-        #)
 
         return thrust, turn_rate, fire, drop_mine
 
