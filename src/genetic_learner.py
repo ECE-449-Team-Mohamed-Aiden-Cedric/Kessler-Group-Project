@@ -133,6 +133,9 @@ def run_genetic_algorithm():
         ga_instance.on_generation = on_generation
         print("Saved state loaded from file")
     else:
+        confirm: str = ""
+        while (confirm != "Y"):
+            confirm = input("are you sure you want to restart the training from scratch? (\"Y\" to continue)\n")
         print("Restarting training from scratch")
         ga_instance: pygad.GA = pygad.GA(
             num_generations=config.GA_GENERATION_GOAL,
