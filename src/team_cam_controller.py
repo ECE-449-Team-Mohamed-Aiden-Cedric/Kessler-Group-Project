@@ -1,24 +1,23 @@
 # ECE 449 Intelligent Systems Engineering
-# Fall 2023
-# Dr. Scott Dick
+# Fall 2024
+# Template code by Dr. Scott Dick
+# Heavily modified by Cedric Boucher
+
+# Genetic algorithm, computational and fuzzy improvements, etc. all added by Cedric Boucher
+# Aiden Teal attempted to achieve a better best fitness result for the genetic algorithm by tweaking the rules,
+# but was unable to get a better fitness score. He also made a few minor improvements.
+# Mohammed did not contribute to the project.
+
 from typing import Dict, Tuple, Any
 from immutabledict import immutabledict
 from math import radians, sqrt, atan2, cos, pi
 
-# Demonstration of a fuzzy tree-based controller for Kessler Game.
-# Please see the Kessler Game Development Guide by Dr. Scott Dick for a
-#   detailed discussion of this source code.
-
-from kesslergame import KesslerController # In Eclipse, the name of the library is kesslergame, not src.kesslergame
+from kesslergame import KesslerController
 from typing import Dict, Tuple
 import skfuzzy as fuzz
 from skfuzzy import control as ctrl
 import numpy as np
-import config as config
 
-from gene import Gene
-from chromosome import Chromosome
-from converted_chromosome import ConvertedChromosome
 
 class TeamCAMController(KesslerController): 
     def __init__(self):
@@ -39,8 +38,8 @@ class TeamCAMController(KesslerController):
         self.__current_frame = 0
         self.__name: str = "Diamond Pickaxe"
 
-        self.__chromosome: Chromosome = chromosome
-        self.__converted_chromosome: ConvertedChromosome | None = None
+        self.__chromosome = chromosome
+        self.__converted_chromosome = None
 
         self.__greatest_threat_asteroid_threat_time: ctrl.Antecedent | None = None
         self.__greatest_threat_asteroid_size: ctrl.Antecedent | None = None
@@ -393,8 +392,8 @@ class TeamCAMController(KesslerController):
         }
 
     @staticmethod
-    def __scale_gene(gene: Gene, minimum: float, maximum: float) -> Gene:
-        scaled_gene: Gene = dict()
+    def __scale_gene(gene, minimum: float, maximum: float):
+        scaled_gene = dict()
         for key in gene.keys():
             scaled_gene[key] = tuple([(gene[key][i] * (maximum - minimum)) + minimum for i in range(3)]) # type: ignore
 
@@ -439,7 +438,7 @@ class TeamCAMController(KesslerController):
         assert (self.__drop_mine is not None)
         assert (self.__ship_thrust is not None)
 
-        greatest_threat_asteroid_threat_time_gene: Gene = self.__converted_chromosome["greatest_threat_asteroid_threat_time"]
+        greatest_threat_asteroid_threat_time_gene = self.__converted_chromosome["greatest_threat_asteroid_threat_time"]
         self.__greatest_threat_asteroid_threat_time['XS'] = fuzz.trimf(self.__greatest_threat_asteroid_threat_time.universe, greatest_threat_asteroid_threat_time_gene["XS"])
         self.__greatest_threat_asteroid_threat_time['S'] = fuzz.trimf(self.__greatest_threat_asteroid_threat_time.universe, greatest_threat_asteroid_threat_time_gene["S"])
         self.__greatest_threat_asteroid_threat_time['M'] = fuzz.trimf(self.__greatest_threat_asteroid_threat_time.universe, greatest_threat_asteroid_threat_time_gene["M"])
@@ -447,27 +446,27 @@ class TeamCAMController(KesslerController):
         self.__greatest_threat_asteroid_threat_time['XL'] = fuzz.trimf(self.__greatest_threat_asteroid_threat_time.universe, greatest_threat_asteroid_threat_time_gene["XL"])
 
         # there are 4 possible asteroid sizes in the game
-        greatest_threat_asteroid_size_gene: Gene = self.__converted_chromosome["greatest_threat_asteroid_size"]
+        greatest_threat_asteroid_size_gene = self.__converted_chromosome["greatest_threat_asteroid_size"]
         self.__greatest_threat_asteroid_size['S'] = fuzz.trimf(self.__greatest_threat_asteroid_size.universe, greatest_threat_asteroid_size_gene["S"])
         self.__greatest_threat_asteroid_size['M'] = fuzz.trimf(self.__greatest_threat_asteroid_size.universe, greatest_threat_asteroid_size_gene["M"])
         self.__greatest_threat_asteroid_size['L'] = fuzz.trimf(self.__greatest_threat_asteroid_size.universe, greatest_threat_asteroid_size_gene["L"])
         self.__greatest_threat_asteroid_size['XL'] = fuzz.trimf(self.__greatest_threat_asteroid_size.universe, greatest_threat_asteroid_size_gene["XL"])
 
-        closest_asteroid_size_gene: Gene = self.__converted_chromosome["closest_asteroid_size"]
+        closest_asteroid_size_gene = self.__converted_chromosome["closest_asteroid_size"]
         self.__closest_asteroid_size['S'] = fuzz.trimf(self.__closest_asteroid_size.universe, closest_asteroid_size_gene["S"])
         self.__closest_asteroid_size['M'] = fuzz.trimf(self.__closest_asteroid_size.universe, closest_asteroid_size_gene["M"])
         self.__closest_asteroid_size['L'] = fuzz.trimf(self.__closest_asteroid_size.universe, closest_asteroid_size_gene["L"])
         self.__closest_asteroid_size['XL'] = fuzz.trimf(self.__closest_asteroid_size.universe, closest_asteroid_size_gene["XL"])
 
         #Declare fuzzy sets for ship_distance_from_nearest_edge (how long it takes for the bullet to reach the intercept point)
-        ship_distance_from_nearest_edge_gene: Gene = self.__converted_chromosome["ship_distance_from_nearest_edge"]
+        ship_distance_from_nearest_edge_gene = self.__converted_chromosome["ship_distance_from_nearest_edge"]
         self.__ship_distance_from_nearest_edge['S'] = fuzz.trimf(self.__ship_distance_from_nearest_edge.universe, ship_distance_from_nearest_edge_gene["S"])
         self.__ship_distance_from_nearest_edge['M'] = fuzz.trimf(self.__ship_distance_from_nearest_edge.universe, ship_distance_from_nearest_edge_gene["M"])
         self.__ship_distance_from_nearest_edge['L'] = fuzz.trimf(self.__ship_distance_from_nearest_edge.universe, ship_distance_from_nearest_edge_gene["L"])
 
         # Declare fuzzy sets for target_ship_firing_heading_delta (degrees of turn needed to reach the calculated firing angle)
         # Hard-coded for a game step of 1/30 seconds
-        target_ship_firing_heading_delta_gene: Gene = self.__converted_chromosome["target_ship_firing_heading_delta"]
+        target_ship_firing_heading_delta_gene = self.__converted_chromosome["target_ship_firing_heading_delta"]
         self.__target_ship_firing_heading_delta['NL'] = fuzz.trimf(self.__target_ship_firing_heading_delta.universe, target_ship_firing_heading_delta_gene["NL"])
         self.__target_ship_firing_heading_delta['NM'] = fuzz.trimf(self.__target_ship_firing_heading_delta.universe, target_ship_firing_heading_delta_gene["NM"])
         self.__target_ship_firing_heading_delta['NS'] = fuzz.trimf(self.__target_ship_firing_heading_delta.universe, target_ship_firing_heading_delta_gene["NS"])
@@ -476,7 +475,7 @@ class TeamCAMController(KesslerController):
         self.__target_ship_firing_heading_delta['PM'] = fuzz.trimf(self.__target_ship_firing_heading_delta.universe, target_ship_firing_heading_delta_gene["PM"])
         self.__target_ship_firing_heading_delta['PL'] = fuzz.trimf(self.__target_ship_firing_heading_delta.universe, target_ship_firing_heading_delta_gene["PL"])
 
-        ship_speed_gene: Gene = self.__converted_chromosome["ship_speed"]
+        ship_speed_gene = self.__converted_chromosome["ship_speed"]
         self.__ship_speed['NL'] = fuzz.trimf(self.__ship_speed.universe, ship_speed_gene["NL"])
         self.__ship_speed['NM'] = fuzz.trimf(self.__ship_speed.universe, ship_speed_gene["NM"])
         self.__ship_speed['NS'] = fuzz.trimf(self.__ship_speed.universe, ship_speed_gene["NS"])
@@ -485,36 +484,36 @@ class TeamCAMController(KesslerController):
         self.__ship_speed['PM'] = fuzz.trimf(self.__ship_speed.universe, ship_speed_gene["PM"])
         self.__ship_speed['PL'] = fuzz.trimf(self.__ship_speed.universe, ship_speed_gene["PL"])
 
-        ship_stopping_distance_gene: Gene = self.__converted_chromosome["ship_stopping_distance"]
+        ship_stopping_distance_gene = self.__converted_chromosome["ship_stopping_distance"]
         self.__ship_stopping_distance['Z']  = fuzz.trimf(self.__ship_stopping_distance.universe, ship_stopping_distance_gene["Z"])
         self.__ship_stopping_distance['PS'] = fuzz.trimf(self.__ship_stopping_distance.universe, ship_stopping_distance_gene["PS"])
         self.__ship_stopping_distance['PM'] = fuzz.trimf(self.__ship_stopping_distance.universe, ship_stopping_distance_gene["PM"])
         self.__ship_stopping_distance['PL'] = fuzz.trimf(self.__ship_stopping_distance.universe, ship_stopping_distance_gene["PL"])
 
-        closest_mine_distance_gene: Gene = self.__converted_chromosome["closest_mine_distance"]
+        closest_mine_distance_gene = self.__converted_chromosome["closest_mine_distance"]
         self.__closest_mine_distance['Z']  = fuzz.trimf(self.__closest_mine_distance.universe, closest_mine_distance_gene["Z"])
         self.__closest_mine_distance['PS'] = fuzz.trimf(self.__closest_mine_distance.universe, closest_mine_distance_gene["PS"])
         self.__closest_mine_distance['PM'] = fuzz.trimf(self.__closest_mine_distance.universe, closest_mine_distance_gene["PM"])
         self.__closest_mine_distance['PL'] = fuzz.trimf(self.__closest_mine_distance.universe, closest_mine_distance_gene["PL"])
 
-        closest_mine_remaining_time_gene: Gene = self.__converted_chromosome["closest_mine_remaining_time"]
+        closest_mine_remaining_time_gene = self.__converted_chromosome["closest_mine_remaining_time"]
         self.__closest_mine_remaining_time['S'] = fuzz.trimf(self.__closest_mine_remaining_time.universe, closest_mine_remaining_time_gene["S"])
         self.__closest_mine_remaining_time['M'] = fuzz.trimf(self.__closest_mine_remaining_time.universe, closest_mine_remaining_time_gene["M"])
         self.__closest_mine_remaining_time['L'] = fuzz.trimf(self.__closest_mine_remaining_time.universe, closest_mine_remaining_time_gene["L"])
 
-        closest_asteroid_distance_gene: Gene = self.__converted_chromosome["closest_asteroid_distance"]
+        closest_asteroid_distance_gene = self.__converted_chromosome["closest_asteroid_distance"]
         self.__closest_asteroid_distance['Z']  = fuzz.trimf(self.__closest_asteroid_distance.universe, closest_asteroid_distance_gene["Z"])
         self.__closest_asteroid_distance['PS'] = fuzz.trimf(self.__closest_asteroid_distance.universe, closest_asteroid_distance_gene["PS"])
         self.__closest_asteroid_distance['PM'] = fuzz.trimf(self.__closest_asteroid_distance.universe, closest_asteroid_distance_gene["PM"])
         self.__closest_asteroid_distance['PL'] = fuzz.trimf(self.__closest_asteroid_distance.universe, closest_asteroid_distance_gene["PL"])
 
-        asteroid_selection_gene: Gene = self.__converted_chromosome["asteroid_selection"]
+        asteroid_selection_gene = self.__converted_chromosome["asteroid_selection"]
         self.__asteroid_selection['closest'] = fuzz.trimf(self.__asteroid_selection.universe, asteroid_selection_gene["closest"])
         self.__asteroid_selection['greatest_threat'] = fuzz.trimf(self.__asteroid_selection.universe, asteroid_selection_gene["greatest_threat"])
 
         # Declare fuzzy sets for the ship_turn consequent; this will be returned as turn_rate.
         # Hard-coded for a game step of 1/30 seconds
-        ship_turn_gene: Gene = self.__converted_chromosome["ship_turn"]
+        ship_turn_gene = self.__converted_chromosome["ship_turn"]
         self.__ship_turn['NL'] = fuzz.trimf(self.__ship_turn.universe, ship_turn_gene["NL"])
         self.__ship_turn['NM'] = fuzz.trimf(self.__ship_turn.universe, ship_turn_gene["NM"])
         self.__ship_turn['NS'] = fuzz.trimf(self.__ship_turn.universe, ship_turn_gene["NS"])
@@ -525,15 +524,15 @@ class TeamCAMController(KesslerController):
 
         #Declare singleton fuzzy sets for the ship_fire consequent; -1 -> don't fire, +1 -> fire; this will be  thresholded
         #   and returned as the boolean 'fire'
-        ship_fire_gene: Gene = self.__converted_chromosome["ship_fire"]
+        ship_fire_gene = self.__converted_chromosome["ship_fire"]
         self.__ship_fire['N'] = fuzz.trimf(self.__ship_fire.universe, ship_fire_gene["N"])
         self.__ship_fire['Y'] = fuzz.trimf(self.__ship_fire.universe, ship_fire_gene["Y"])
 
-        drop_mine_gene: Gene = self.__converted_chromosome["drop_mine"]
+        drop_mine_gene = self.__converted_chromosome["drop_mine"]
         self.__drop_mine['N'] = fuzz.trimf(self.__drop_mine.universe, drop_mine_gene["N"])
         self.__drop_mine['Y'] = fuzz.trimf(self.__drop_mine.universe, drop_mine_gene["Y"])
 
-        ship_thrust_gene: Gene = self.__converted_chromosome["ship_thrust"]
+        ship_thrust_gene = self.__converted_chromosome["ship_thrust"]
         self.__ship_thrust['NL'] = fuzz.trimf(self.__ship_thrust.universe, ship_thrust_gene["NL"])
         self.__ship_thrust['NM'] = fuzz.trimf(self.__ship_thrust.universe, ship_thrust_gene["NM"])
         self.__ship_thrust['NS'] = fuzz.trimf(self.__ship_thrust.universe, ship_thrust_gene["NS"])
@@ -1010,36 +1009,36 @@ class TeamCAMController(KesslerController):
         asteroid_select = ctrl.ControlSystem(self.__asteroid_select_fuzzy_rules)
         self.__asteroid_select_simulation = ctrl.ControlSystemSimulation(
             asteroid_select,
-            cache=config.USE_SIMULATION_CACHE,
-            flush_after_run=config.FLUSH_SIMULATION_CACHE_AFTER_RUN
+            cache=True,
+            flush_after_run=1000
         )
 
         ship_fire = ctrl.ControlSystem(self.__ship_fire_fuzzy_rules)
         self.__ship_fire_simulation = ctrl.ControlSystemSimulation(
             ship_fire,
-            cache=config.USE_SIMULATION_CACHE,
-            flush_after_run=config.FLUSH_SIMULATION_CACHE_AFTER_RUN
+            cache=True,
+            flush_after_run=1000
         )
 
         ship_turn = ctrl.ControlSystem(self.__ship_turn_fuzzy_rules)
         self.__ship_turn_simulation = ctrl.ControlSystemSimulation(
             ship_turn,
-            cache=config.USE_SIMULATION_CACHE,
-            flush_after_run=config.FLUSH_SIMULATION_CACHE_AFTER_RUN
+            cache=True,
+            flush_after_run=1000
         )
 
         drop_mine = ctrl.ControlSystem(self.__drop_mine_fuzzy_rules)
         self.__drop_mine_simulation = ctrl.ControlSystemSimulation(
             drop_mine,
-            cache=config.USE_SIMULATION_CACHE,
-            flush_after_run=config.FLUSH_SIMULATION_CACHE_AFTER_RUN
+            cache=True,
+            flush_after_run=1000
         )
 
         ship_thrust = ctrl.ControlSystem(self.__ship_thrust_fuzzy_rules)
         self.__ship_thrust_simulation = ctrl.ControlSystemSimulation(
             ship_thrust,
-            cache=config.USE_SIMULATION_CACHE,
-            flush_after_run=config.FLUSH_SIMULATION_CACHE_AFTER_RUN
+            cache=True,
+            flush_after_run=1000
         )
 
     def actions(self, ship_state: Dict[str, Any], game_state: immutabledict[Any, Any]) -> Tuple[float, float, bool, bool]:
