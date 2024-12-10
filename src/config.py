@@ -11,8 +11,8 @@ FLUSH_SIMULATION_CACHE_AFTER_RUN: int = 1000 # default is 1000
 MAP_SIZE: tuple[int, int] = (3400, 2000)
 LIVES: int = 3
 MINES: int = 3
-TIME_LIMIT: int = 10
-ASTEROID_SPEED_RANGE: tuple[int, int] = (0, 500)
+TIME_LIMIT: int = 240
+ASTEROID_SPEED_RANGE: tuple[int, int] = (0, 500) # it is intentional that the fastest asteroids go faster than the ship can
 
 GA_POPULATION_SIZE: int = 42
 GA_GENERATION_GOAL: int = 10000
