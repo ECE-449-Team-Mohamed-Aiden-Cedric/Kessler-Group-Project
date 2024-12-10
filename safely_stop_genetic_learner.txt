@@ -1,0 +1,2 @@
+the genetic learning will clear the contents of this file on launch,
+add any text in this file to stop the learner once the current generation ends
