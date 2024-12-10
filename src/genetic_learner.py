@@ -89,7 +89,7 @@ def fitness(ga_instance: pygad.GA, chromosome: Chromosome, solution_idx: int, ru
 
     final_fitness_score /= len(config.SCENARIOS)
 
-    print(f"iteration fitness: {final_fitness_score}")
+    print("iteration fitness: {:.2f}".format(final_fitness_score))
 
     return final_fitness_score
 
