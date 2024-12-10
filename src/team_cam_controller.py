@@ -1119,7 +1119,7 @@ class TeamCAMController(KesslerController):
                 selected_asteroid_position = greatest_threat_asteroid_position
                 selected_asteroid_velocity = greatest_threat_asteroid_velocity
         except KeyError:
-            print("error in asteroid selection")
+            #print("error in asteroid selection")
             selected_asteroid_position = closest_asteroid_position
             selected_asteroid_velocity = closest_asteroid_velocity
 
@@ -1147,7 +1147,7 @@ class TeamCAMController(KesslerController):
             self.__ship_turn_simulation.compute()
             turn_rate: float = self.__ship_turn_simulation.output['ship_turn']
         except ValueError:
-            print("error in ship_turn_simulation")
+            #print("error in ship_turn_simulation")
             turn_rate: float = 0
 
         self.__drop_mine_simulation.compute()

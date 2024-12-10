@@ -93,6 +93,9 @@ def fitness(ga_instance: pygad.GA, chromosome: Chromosome, solution_idx: int, ru
 
     return final_fitness_score
 
+def fitness_for_pygad(ga_instance: pygad.GA, chromosome: Chromosome, solution_idx: int) -> float:
+    return fitness(ga_instance, chromosome, solution_idx, run_with_graphics = False)
+
 def on_generation(ga_instance: pygad.GA):
     ga_instance.save(config.GA_MODEL_FILE)
     print("Generation: {:d}".format(ga_instance.generations_completed))
@@ -131,7 +134,7 @@ def run_genetic_algorithm():
         print("Continuing training from saved state")
         ga_instance: pygad.GA = pygad.load(config.GA_MODEL_FILE)
         # reset functions to prevent pickling error
-        ga_instance.fitness_func = fitness
+        ga_instance.fitness_func = fitness_for_pygad
         ga_instance.on_generation = on_generation
         print("Saved state loaded from file")
     else:
@@ -139,7 +142,7 @@ def run_genetic_algorithm():
         ga_instance: pygad.GA = pygad.GA(
             num_generations=config.GA_GENERATION_GOAL,
             num_parents_mating=config.GA_NUMBER_OF_PARENTS,
-            fitness_func=fitness,
+            fitness_func=fitness_for_pygad,
             sol_per_pop=config.GA_POPULATION_SIZE,
             num_genes=config.GA_CHROMOSOME_LENGTH,
             on_generation=on_generation,
