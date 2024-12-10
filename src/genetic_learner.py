@@ -52,7 +52,7 @@ def fitness_score_function(score: Score, scenario: Scenario) -> float:
 
     return fitness_score
 
-def fitness(ga_instance: pygad.GA, chromosome: Chromosome, solution_idx: int) -> float:
+def fitness(ga_instance: pygad.GA, chromosome: Chromosome, solution_idx: int, run_with_graphics: bool = False) -> float:
     """runs the controller with the given chromosome
     and returns a fitness score to be maximized
 
@@ -78,7 +78,7 @@ def fitness(ga_instance: pygad.GA, chromosome: Chromosome, solution_idx: int) ->
         }
 
         game: KesslerGame
-        if config.RUN_WITH_GRAPHICS:
+        if run_with_graphics:
             game = KesslerGame(settings = game_settings)
         else:
             game = TrainerEnvironment(settings = game_settings)
@@ -125,8 +125,7 @@ def check_stop_flag() -> bool:
 def run_genetic_algorithm():
     create_stop_flag_file()
     if (
-        not config.GA_RESTART_FROM_SCRATCH
-        and os.path.exists(config.GA_MODEL_FILE+".pkl")
+        os.path.exists(config.GA_MODEL_FILE+".pkl")
         and os.path.isfile(config.GA_MODEL_FILE+".pkl")
     ):
         print("Continuing training from saved state")
@@ -136,10 +135,7 @@ def run_genetic_algorithm():
         ga_instance.on_generation = on_generation
         print("Saved state loaded from file")
     else:
-        confirm: str = ""
-        while (confirm != "Y"):
-            confirm = input("are you sure you want to restart the training from scratch? (\"Y\" to continue)\n")
-        print("Restarting training from scratch")
+        print("Save file not found,\nRestarting training from scratch")
         ga_instance: pygad.GA = pygad.GA(
             num_generations=config.GA_GENERATION_GOAL,
             num_parents_mating=config.GA_NUMBER_OF_PARENTS,
