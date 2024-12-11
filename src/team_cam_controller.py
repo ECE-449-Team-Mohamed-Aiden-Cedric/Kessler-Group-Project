@@ -1146,7 +1146,7 @@ class TeamCAMController(KesslerController):
         try:
             self.__ship_turn_simulation.compute()
             turn_rate = self.__ship_turn_simulation.output['ship_turn']
-        except ValueError:
+        except (ValueError, KeyError):
             #print("error in ship_turn_simulation")
             turn_rate = 0
 
@@ -1157,7 +1157,7 @@ class TeamCAMController(KesslerController):
                 fire = True
             else:
                 fire = False
-        except ValueError:
+        except (ValueError, KeyError):
             fire = True
 
         drop_mine: bool
@@ -1167,14 +1167,14 @@ class TeamCAMController(KesslerController):
                 drop_mine = True
             else:
                 drop_mine = False
-        except ValueError:
+        except (ValueError, KeyError):
             drop_mine = False
 
         thrust: float
         try:
             self.__ship_thrust_simulation.compute()
             thrust = self.__ship_thrust_simulation.output['ship_thrust']
-        except ValueError:
+        except (ValueError, KeyError):
             thrust = 0
 
         self.__current_frame +=1
