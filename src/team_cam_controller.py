@@ -1142,32 +1142,40 @@ class TeamCAMController(KesslerController):
         self.__ship_thrust_simulation.input['closest_mine_remaining_time'] = closest_mine_remaining_time
         self.__ship_thrust_simulation.input['closest_asteroid_distance'] = closest_asteroid_distance
 
-        self.__ship_fire_simulation.compute()
+        turn_rate: float
         try:
             self.__ship_turn_simulation.compute()
-            turn_rate: float = self.__ship_turn_simulation.output['ship_turn']
+            turn_rate = self.__ship_turn_simulation.output['ship_turn']
         except ValueError:
             #print("error in ship_turn_simulation")
-            turn_rate: float = 0
-
-        self.__drop_mine_simulation.compute()
-        self.__ship_thrust_simulation.compute()
-
-        # Get the defuzzified outputs
+            turn_rate = 0
 
         fire: bool
-        if self.__ship_fire_simulation.output['ship_fire'] >= 0:
+        try:
+            self.__ship_fire_simulation.compute()
+            if self.__ship_fire_simulation.output['ship_fire'] >= 0:
+                fire = True
+            else:
+                fire = False
+        except ValueError:
             fire = True
-        else:
-            fire = False
 
         drop_mine: bool
-        if self.__drop_mine_simulation.output['drop_mine'] >= 0:
-            drop_mine = True
-        else:
+        try:
+            self.__drop_mine_simulation.compute()
+            if self.__drop_mine_simulation.output['drop_mine'] >= 0:
+                drop_mine = True
+            else:
+                drop_mine = False
+        except ValueError:
             drop_mine = False
 
-        thrust: float = self.__ship_thrust_simulation.output['ship_thrust']
+        thrust: float
+        try:
+            self.__ship_thrust_simulation.compute()
+            thrust = self.__ship_thrust_simulation.output['ship_thrust']
+        except ValueError:
+            thrust = 0
 
         self.__current_frame +=1
 
