@@ -1206,6 +1206,10 @@ class TeamCAMController(KesslerController):
 
         assert (targ_det >= 0)
 
+        if (speed_2**2 - speed_1**2) == 0:
+            # no intercept, avoids division by 0
+            return 10000
+
         # Combine the Law of Cosines with the quadratic formula for solve for intercept time. Remember, there are two values produced.
         intrcpt1: float = ((2 * distance * speed_2 * cos_my_theta2) + sqrt(targ_det)) / (2 * (speed_2**2 - speed_1**2))
         intrcpt2: float = ((2 * distance * speed_2 * cos_my_theta2) - sqrt(targ_det)) / (2 * (speed_2**2 - speed_1**2))
@@ -1263,6 +1267,10 @@ class TeamCAMController(KesslerController):
 
         if (determinant < 0):
             # the objects never collide!
+            return None
+
+        if (a == 0):
+            # the object never collide! (this avoids division by 0)
             return None
 
         collision_time_candidate_1: float = (-b + sqrt(determinant)) / (2 * a)
