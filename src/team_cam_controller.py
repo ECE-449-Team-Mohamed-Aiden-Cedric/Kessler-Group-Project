@@ -1045,6 +1045,7 @@ class TeamCAMController(KesslerController):
         ship_position: tuple[float, float] = ship_state["position"]
         ship_heading: float = radians(ship_state["heading"])
         ship_radius: int = ship_state["radius"]
+        safety_margin_ship_radius: float = ship_radius * 1.5
         ship_velocity: tuple[float, float] = ship_state["velocity"]
         ship_speed: float = ship_state["speed"]
         stopping_time: float = abs(ship_speed / (self.__ship_thrust_range[0]-80)) # -80 is for the drag
@@ -1078,7 +1079,7 @@ class TeamCAMController(KesslerController):
         closest_asteroid_velocity: tuple[float, float] = closest_asteroid["velocity"]
         closest_asteroid_heading: float = atan2(closest_asteroid_velocity[1], closest_asteroid_velocity[0])
 
-        greatest_threat_asteroid_index: None | int = self.__find_greatest_threat_asteroid(ship_position, ship_velocity, ship_radius, asteroids)
+        greatest_threat_asteroid_index: None | int = self.__find_greatest_threat_asteroid(ship_position, ship_velocity, safety_margin_ship_radius, asteroids)
         greatest_threat_asteroid: dict[str, Any] | None = None
         greatest_threat_asteroid_threat_time: float = 100
         greatest_threat_asteroid_radius: float = 0
@@ -1096,7 +1097,7 @@ class TeamCAMController(KesslerController):
             asteroid_intercept = self.__calculate_intercept(
                 ship_position,
                 ship_velocity,
-                ship_radius,
+                safety_margin_ship_radius,
                 greatest_threat_asteroid_position,
                 greatest_threat_asteroid_velocity,
                 greatest_threat_asteroid_radius
@@ -1112,7 +1113,7 @@ class TeamCAMController(KesslerController):
         selected_asteroid_position: tuple[float, float]
         selected_asteroid_velocity: tuple[float, float]
         try:
-            if (greatest_threat_asteroid is None or self.__asteroid_select_simulation.output['asteroid_selection'] < 0):
+            if (greatest_threat_asteroid is None or self.__asteroid_select_simulation.output['asteroid_selection'] < 0): # TODO find asteroid with least turning to hit
                 selected_asteroid_position = closest_asteroid_position
                 selected_asteroid_velocity = closest_asteroid_velocity
             else:
