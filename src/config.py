@@ -12,7 +12,6 @@ MAP_SIZE: tuple[int, int] = (3400, 2000)
 LIVES: int = 3
 MINES: int = 3
 TIME_LIMIT: int = 240
-ASTEROID_SPEED_RANGE: tuple[int, int] = (-500, 500) # it is intentional that the fastest asteroids go faster than the ship can
 
 GA_POPULATION_SIZE: int = 42
 GA_GENERATION_GOAL: int = 10000
@@ -28,13 +27,13 @@ GA_MODEL_FILE: str = "team_cam_controller"
 
 GA_STOP_FLAG_FILE: str = "safely_stop_genetic_learner.txt"
 
-SCENARIOS: list[Scenario] = [ # TODO define asteroid states too
+SCENARIOS: list[Scenario] = [
     Scenario(
         name = "Easy Scenario",
         asteroid_states = [
             {
                 "position": (random.randint(0, MAP_SIZE[0]), random.randint(0, MAP_SIZE[1])),
-                "speed": random.randint(ASTEROID_SPEED_RANGE[0], ASTEROID_SPEED_RANGE[1])
+                "speed": random.randint(-100, 100)
             }
             for _
             in range(10)
@@ -59,7 +58,7 @@ SCENARIOS: list[Scenario] = [ # TODO define asteroid states too
         asteroid_states = [
             {
                 "position": (random.randint(0, MAP_SIZE[0]), random.randint(0, MAP_SIZE[1])),
-                "speed": random.randint(ASTEROID_SPEED_RANGE[0], ASTEROID_SPEED_RANGE[1])
+                "speed": random.randint(-200, 200)
             }
             for _
             in range(20)
@@ -84,7 +83,7 @@ SCENARIOS: list[Scenario] = [ # TODO define asteroid states too
         asteroid_states = [
             {
                 "position": (random.randint(0, MAP_SIZE[0]), random.randint(0, MAP_SIZE[1])),
-                "speed": random.randint(ASTEROID_SPEED_RANGE[0], ASTEROID_SPEED_RANGE[1])
+                "speed": random.randint(-300, 300)
             }
             for _
             in range(40)
@@ -109,10 +108,10 @@ SCENARIOS: list[Scenario] = [ # TODO define asteroid states too
         asteroid_states = [
             {
                 "position": (random.randint(0, MAP_SIZE[0]), random.randint(0, MAP_SIZE[1])),
-                "speed": random.randint(ASTEROID_SPEED_RANGE[0], ASTEROID_SPEED_RANGE[1])
+                "speed": random.randint(-400, 400)
             }
             for _
-            in range(80)
+            in range(60)
         ],
         ship_states = [
             {
@@ -134,10 +133,35 @@ SCENARIOS: list[Scenario] = [ # TODO define asteroid states too
         asteroid_states = [
             {
                 "position": (random.randint(0, MAP_SIZE[0]), random.randint(0, MAP_SIZE[1])),
-                "speed": random.randint(ASTEROID_SPEED_RANGE[0], ASTEROID_SPEED_RANGE[1])
+                "speed": random.randint(-500, 500)
             }
             for _
-            in range(160)
+            in range(80)
+        ],
+        ship_states = [
+            {
+                "position": tuple([i/2 for i in MAP_SIZE]),
+                "angle": 90,
+                "lives": LIVES,
+                "team": 1,
+                "mines_remaining": MINES,
+            }
+        ],
+        map_size = MAP_SIZE,
+        time_limit = TIME_LIMIT,
+        ammo_limit_multiplier = 0,
+        stop_if_no_ammo = False,
+        seed = 4420
+    ),
+    Scenario(
+        name = "Extremely Hard Scenario",
+        asteroid_states = [
+            {
+                "position": (random.randint(0, MAP_SIZE[0]), random.randint(0, MAP_SIZE[1])),
+                "speed": random.randint(-100, 100)
+            }
+            for _
+            in range(100)
         ],
         ship_states = [
             {
