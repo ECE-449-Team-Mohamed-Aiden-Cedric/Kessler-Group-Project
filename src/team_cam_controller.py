@@ -775,32 +775,16 @@ class TeamCAMController(KesslerController):
 
         self.__drop_mine_fuzzy_rules = [
             ctrl.Rule(
-                self.__ship_speed['NL'],
-                self.__drop_mine['Y']
-            ),
-            ctrl.Rule(
-                self.__ship_speed['NM'],
-                self.__drop_mine['Y']
-            ),
-            ctrl.Rule(
-                self.__ship_speed['NS'],
+                self.__ship_is_invincible['Y'],
                 self.__drop_mine['N']
             ),
             ctrl.Rule(
-                self.__ship_speed['Z'],
-                self.__drop_mine['N']
-            ),
-            ctrl.Rule(
-                self.__ship_speed['PS'],
-                self.__drop_mine['N']
-            ),
-            ctrl.Rule(
-                self.__ship_speed['PM'],
+                self.__greatest_threat_asteroid_threat_time['XS'] & self.__ship_is_invincible['N'],
                 self.__drop_mine['Y']
             ),
             ctrl.Rule(
-                self.__ship_speed['PL'],
-                self.__drop_mine['Y']
+                (self.__greatest_threat_asteroid_threat_time['S'] | self.__greatest_threat_asteroid_threat_time['M'] | self.__greatest_threat_asteroid_threat_time['L'] | self.__greatest_threat_asteroid_threat_time['XL']) & self.__ship_is_invincible['N'],
+                self.__drop_mine['N']
             )
         ]
 
@@ -1147,9 +1131,11 @@ class TeamCAMController(KesslerController):
 
         # Pass the inputs to the rulebase and fire it
 
-        self.__ship_fire_simulation.input['target_ship_firing_heading_delta'] = target_ship_firing_heading_delta
+        self.__ship_fire_simulation.input['greatest_threat_asteroid_threat_time'] = greatest_threat_asteroid_threat_time
+        self.__ship_fire_simulation.input['ship_is_invincible'] = int(ship_is_respawning)
         self.__ship_turn_simulation.input['target_ship_firing_heading_delta'] = target_ship_firing_heading_delta
-        self.__drop_mine_simulation.input['ship_speed'] = ship_speed
+        self.__drop_mine_simulation.input['greatest_threat_asteroid_threat_time'] = greatest_threat_asteroid_threat_time
+        self.__drop_mine_simulation.input['ship_is_invincible'] = int(ship_is_respawning)
         self.__ship_thrust_simulation.input['ship_stopping_distance'] = stopping_distance
         self.__ship_thrust_simulation.input['closest_mine_distance'] = closest_mine_distance
         self.__ship_thrust_simulation.input['closest_mine_remaining_time'] = closest_mine_remaining_time
