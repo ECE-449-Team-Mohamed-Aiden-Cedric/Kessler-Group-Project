@@ -43,6 +43,7 @@ class TeamCAMController(KesslerController):
         self.__ship_fire: ctrl.Consequent | None = None
         self.__drop_mine: ctrl.Consequent | None = None
         self.__ship_thrust: ctrl.Consequent | None = None
+        self.__ship_is_invincible: ctrl.Antecedent | None = None
 
         self.__asteroid_select_fuzzy_rules: list[ctrl.Rule] | None = None
         self.__ship_fire_fuzzy_rules: list[ctrl.Rule] | None = None
@@ -65,6 +66,7 @@ class TeamCAMController(KesslerController):
         self.__ship_drop_mine_range: tuple[float, float] = (-1, 1)
         self.__ship_thrust_range: tuple[float, float] = (-480.0, 480.0) # m/s^2
         self.__asteroid_selection_range: tuple[float, float] = (-1, 1)
+        self.__ship_is_invincible_range: tuple[float, float] = (-1, 1)
 
         self.__asteroid_select_simulation: ctrl.ControlSystemSimulation | None = None
         self.__ship_fire_simulation: ctrl.ControlSystemSimulation | None = None
@@ -360,6 +362,22 @@ class TeamCAMController(KesslerController):
             self.__asteroid_selection_range[1]
         )
 
+        start_gene_index = end_gene_index
+        genes_needed = 2
+        end_gene_index = start_gene_index + genes_needed
+        values: list[float] = chromosome_list[start_gene_index:end_gene_index]
+        values.extend([-0.01, 1.01])
+        values = sorted(values)
+        ship_is_invincible_gene: Gene = { # type: ignore
+            "N": tuple(values[0:3]),
+            "Y": tuple(values[1:4])
+        }
+        ship_is_invincible_gene = self.__scale_gene(
+            ship_is_invincible_gene,
+            self.__ship_is_invincible_range[0],
+            self.__ship_is_invincible_range[1]
+        )
+
         self.__converted_chromosome = {
             "ship_distance_from_nearest_edge": ship_distance_from_nearest_edge_gene,
             "target_ship_firing_heading_delta": target_ship_firing_heading_delta_gene,
@@ -375,7 +393,8 @@ class TeamCAMController(KesslerController):
             "ship_turn": ship_turn_gene,
             "ship_fire": ship_fire_gene,
             "drop_mine": drop_mine_gene,
-            "ship_thrust": ship_thrust_gene
+            "ship_thrust": ship_thrust_gene,
+            "ship_is_invincible": ship_is_invincible_gene
         }
 
     @staticmethod
@@ -397,6 +416,7 @@ class TeamCAMController(KesslerController):
         self.__greatest_threat_asteroid_threat_time = ctrl.Antecedent(np.arange(self.__greatest_threat_asteroid_threat_time_range[0], self.__greatest_threat_asteroid_threat_time_range[1], 0.01), 'greatest_threat_asteroid_threat_time')
         self.__greatest_threat_asteroid_size = ctrl.Antecedent(np.arange(self.__greatest_threat_asteroid_size_range[0], self.__greatest_threat_asteroid_size_range[1], 0.1), 'greatest_threat_asteroid_size')
         self.__closest_asteroid_size = ctrl.Antecedent(np.arange(self.__closest_asteroid_size_range[0], self.__closest_asteroid_size_range[1], 0.1), 'closest_asteroid_size')
+        self.__ship_is_invincible = ctrl.Antecedent(np.arange(self.__ship_is_invincible_range[0], self.__ship_is_invincible_range[1], 0.1), 'ship_is_invincible')
 
         self.__asteroid_selection = ctrl.Consequent(np.arange(self.__asteroid_selection_range[0], self.__asteroid_selection_range[1], 0.1), 'asteroid_selection')
         self.__ship_turn = ctrl.Consequent(np.arange(self.__ship_turn_range[0], self.__ship_turn_range[1], 1), 'ship_turn')
@@ -424,6 +444,7 @@ class TeamCAMController(KesslerController):
         assert (self.__ship_fire is not None)
         assert (self.__drop_mine is not None)
         assert (self.__ship_thrust is not None)
+        assert (self.__ship_is_invincible is not None)
 
         greatest_threat_asteroid_threat_time_gene: Gene = self.__converted_chromosome["greatest_threat_asteroid_threat_time"]
         self.__greatest_threat_asteroid_threat_time['XS'] = fuzz.trimf(self.__greatest_threat_asteroid_threat_time.universe, greatest_threat_asteroid_threat_time_gene["XS"])
@@ -444,6 +465,10 @@ class TeamCAMController(KesslerController):
         self.__closest_asteroid_size['M'] = fuzz.trimf(self.__closest_asteroid_size.universe, closest_asteroid_size_gene["M"])
         self.__closest_asteroid_size['L'] = fuzz.trimf(self.__closest_asteroid_size.universe, closest_asteroid_size_gene["L"])
         self.__closest_asteroid_size['XL'] = fuzz.trimf(self.__closest_asteroid_size.universe, closest_asteroid_size_gene["XL"])
+
+        ship_is_invincible_gene: Gene = self.__converted_chromosome["ship_is_invincible"]
+        self.__ship_is_invincible['Y'] = fuzz.trimf(self.__ship_is_invincible.universe, ship_is_invincible_gene["Y"])
+        self.__ship_is_invincible['N'] = fuzz.trimf(self.__ship_is_invincible.universe, ship_is_invincible_gene["N"])
 
         #Declare fuzzy sets for ship_distance_from_nearest_edge (how long it takes for the bullet to reach the intercept point)
         ship_distance_from_nearest_edge_gene: Gene = self.__converted_chromosome["ship_distance_from_nearest_edge"]
@@ -545,6 +570,7 @@ class TeamCAMController(KesslerController):
         assert (self.__ship_fire is not None)
         assert (self.__drop_mine is not None)
         assert (self.__ship_thrust is not None)
+        assert (self.__ship_is_invincible is not None)
 
         self.__asteroid_select_fuzzy_rules = [
             ctrl.Rule(
@@ -703,31 +729,15 @@ class TeamCAMController(KesslerController):
 
         self.__ship_fire_fuzzy_rules = [
             ctrl.Rule(
-                self.__target_ship_firing_heading_delta['NL'],
+                self.__ship_is_invincible['N'],
                 self.__ship_fire['Y']
             ),
             ctrl.Rule(
-                self.__target_ship_firing_heading_delta['NM'],
-                self.__ship_fire['Y']
+                self.__ship_is_invincible['Y'] & (self.__greatest_threat_asteroid_threat_time['XS'] | self.__greatest_threat_asteroid_threat_time['S'] | self.__greatest_threat_asteroid_threat_time['M']),
+                self.__ship_fire['N']
             ),
             ctrl.Rule(
-                self.__target_ship_firing_heading_delta['NS'],
-                self.__ship_fire['Y']
-            ),
-            ctrl.Rule(
-                self.__target_ship_firing_heading_delta['Z'],
-                self.__ship_fire['Y']
-            ),
-            ctrl.Rule(
-                self.__target_ship_firing_heading_delta['PS'],
-                self.__ship_fire['Y']
-            ),
-            ctrl.Rule(
-                self.__target_ship_firing_heading_delta['PM'],
-                self.__ship_fire['Y']
-            ),
-            ctrl.Rule(
-                self.__target_ship_firing_heading_delta['PL'],
+                self.__ship_is_invincible['Y'] & (self.__greatest_threat_asteroid_threat_time['L'] | self.__greatest_threat_asteroid_threat_time['XL']),
                 self.__ship_fire['Y']
             )
         ]
@@ -794,7 +804,7 @@ class TeamCAMController(KesslerController):
             )
         ]
 
-        self.__ship_thrust_fuzzy_rules = [ # TODO change rules to use greatest threat asteroid? idk
+        self.__ship_thrust_fuzzy_rules = [ # TODO change rules to use greatest threat asteroid? idk # TODO make thrust aware of impact time?
             ctrl.Rule(
                 self.__ship_stopping_distance['PL'] & self.__closest_asteroid_distance['Z'],
                 self.__ship_thrust['NL']
@@ -1042,6 +1052,8 @@ class TeamCAMController(KesslerController):
         self.__ship_distance_from_nearest_edge_range = (0, min(game_map_size)/2)
         max_map_distance: float = sqrt(game_map_size[0]**2 + game_map_size[1]**2)
 
+        ship_is_respawning: bool = ship_state["is_respawning"]
+        ship_lives_remaining: int = ship_state["lives_remaining"]
         ship_position: tuple[float, float] = ship_state["position"]
         ship_heading: float = radians(ship_state["heading"])
         ship_radius: int = ship_state["radius"]
@@ -1114,7 +1126,7 @@ class TeamCAMController(KesslerController):
         selected_asteroid_velocity: tuple[float, float]
         try:
             if (greatest_threat_asteroid is None or self.__asteroid_select_simulation.output['asteroid_selection'] < 0): # TODO find asteroid with least turning to hit
-                selected_asteroid_position = closest_asteroid_position
+                selected_asteroid_position = closest_asteroid_position # TODO try to only shoot the smallest asteroids and just dodge the big ones?
                 selected_asteroid_velocity = closest_asteroid_velocity
             else:
                 selected_asteroid_position = greatest_threat_asteroid_position
@@ -1238,7 +1250,7 @@ class TeamCAMController(KesslerController):
         return target_ship_firing_heading
 
     @staticmethod
-    def __calculate_intercept(
+    def __calculate_intercept( # FIXME make aware of screen wrapping
         position_1: tuple[float, float],
         velocity_1: tuple[float, float],
         radius_1: float,
