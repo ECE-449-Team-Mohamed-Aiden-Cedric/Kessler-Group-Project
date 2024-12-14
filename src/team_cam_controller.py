@@ -239,16 +239,14 @@ class TeamCAMController(KesslerController):
         )
 
         start_gene_index = end_gene_index
-        genes_needed = 4
+        genes_needed = 2
         end_gene_index = start_gene_index + genes_needed
         values: list[float] = chromosome_list[start_gene_index:end_gene_index]
         values.extend([-0.01, 1.01])
         values = sorted(values)
         closest_mine_distance_gene: Gene = { # type: ignore
-            "Z": tuple(values[0:3]),
-            "PS": tuple(values[1:4]),
-            "PM": tuple(values[2:5]),
-            "PL": tuple(values[3:6])
+            "in_range": tuple(values[0:3]),
+            "out_of_range": tuple(values[1:4])
         }
         closest_mine_distance_gene = self.__scale_gene(
             closest_mine_distance_gene,
@@ -503,10 +501,8 @@ class TeamCAMController(KesslerController):
         self.__ship_stopping_distance['PL'] = fuzz.trimf(self.__ship_stopping_distance.universe, ship_stopping_distance_gene["PL"])
 
         closest_mine_distance_gene: Gene = self.__converted_chromosome["closest_mine_distance"]
-        self.__closest_mine_distance['Z']  = fuzz.trimf(self.__closest_mine_distance.universe, closest_mine_distance_gene["Z"])
-        self.__closest_mine_distance['PS'] = fuzz.trimf(self.__closest_mine_distance.universe, closest_mine_distance_gene["PS"])
-        self.__closest_mine_distance['PM'] = fuzz.trimf(self.__closest_mine_distance.universe, closest_mine_distance_gene["PM"])
-        self.__closest_mine_distance['PL'] = fuzz.trimf(self.__closest_mine_distance.universe, closest_mine_distance_gene["PL"])
+        self.__closest_mine_distance['in_range']  = fuzz.trimf(self.__closest_mine_distance.universe, closest_mine_distance_gene["in_range"])
+        self.__closest_mine_distance['out_of_range'] = fuzz.trimf(self.__closest_mine_distance.universe, closest_mine_distance_gene["out_of_range"])
 
         closest_mine_remaining_time_gene: Gene = self.__converted_chromosome["closest_mine_remaining_time"]
         self.__closest_mine_remaining_time['S'] = fuzz.trimf(self.__closest_mine_remaining_time.universe, closest_mine_remaining_time_gene["S"])
@@ -788,194 +784,50 @@ class TeamCAMController(KesslerController):
             )
         ]
 
-        self.__ship_thrust_fuzzy_rules = [ # TODO change rules to use greatest threat asteroid? idk # TODO make thrust aware of impact time?
+        self.__ship_thrust_fuzzy_rules = [
             ctrl.Rule(
-                self.__ship_stopping_distance['PL'] & self.__closest_asteroid_distance['Z'],
-                self.__ship_thrust['NL']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PL'] & self.__closest_asteroid_distance['PS'],
-                self.__ship_thrust['NL']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PL'] & self.__closest_asteroid_distance['PM'] & (self.__closest_mine_distance['Z'] | self.__closest_mine_distance['PS']) & self.__closest_mine_remaining_time['S'],
-                self.__ship_thrust['NL']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PL'] & self.__closest_asteroid_distance['PM'] & (self.__closest_mine_distance['Z'] | self.__closest_mine_distance['PS']) & self.__closest_mine_remaining_time['M'],
-                self.__ship_thrust['NL']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PL'] & self.__closest_asteroid_distance['PM'] & (self.__closest_mine_distance['Z'] | self.__closest_mine_distance['PS']) & self.__closest_mine_remaining_time['L'],
-                self.__ship_thrust['NM']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PL'] & self.__closest_asteroid_distance['PM'] & (self.__closest_mine_distance['PM'] | self.__closest_mine_distance['PL']),
-                self.__ship_thrust['NM']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PL'] & self.__closest_asteroid_distance['PL'] & self.__closest_mine_distance['Z'],
+                (self.__closest_mine_remaining_time['L'] | self.__closest_mine_distance['out_of_range']) & (self.__greatest_threat_asteroid_threat_time['XS'] | self.__greatest_threat_asteroid_threat_time['S']) & (self.__target_ship_firing_heading_delta['NL'] | self.__target_ship_firing_heading_delta['PL']),
                 self.__ship_thrust['PL']
             ),
             ctrl.Rule(
-                self.__ship_stopping_distance['PL'] & self.__closest_asteroid_distance['PL'] & self.__closest_mine_distance['PS'],
+                (self.__closest_mine_remaining_time['L'] | self.__closest_mine_distance['out_of_range']) & (self.__greatest_threat_asteroid_threat_time['XS'] | self.__greatest_threat_asteroid_threat_time['S']) & (self.__target_ship_firing_heading_delta['NS'] | self.__target_ship_firing_heading_delta['Z'] | self.__target_ship_firing_heading_delta['PS']),
+                self.__ship_thrust['NL']
+            ),
+            ctrl.Rule(
+                (self.__closest_mine_remaining_time['L'] | self.__closest_mine_distance['out_of_range']) & (self.__greatest_threat_asteroid_threat_time['XS'] | self.__greatest_threat_asteroid_threat_time['S']) & (self.__target_ship_firing_heading_delta['NM'] | self.__target_ship_firing_heading_delta['PM']) & (self.__ship_speed['Z'] | self.__ship_speed['PS'] | self.__ship_speed['PM'] | self.__ship_speed['PL']),
+                self.__ship_thrust['NL']
+            ),
+            ctrl.Rule(
+                (self.__closest_mine_remaining_time['L'] | self.__closest_mine_distance['out_of_range']) & (self.__greatest_threat_asteroid_threat_time['XS'] | self.__greatest_threat_asteroid_threat_time['S']) & (self.__target_ship_firing_heading_delta['NM'] | self.__target_ship_firing_heading_delta['PM']) & (self.__ship_speed['NS'] | self.__ship_speed['NM'] | self.__ship_speed['NL']),
                 self.__ship_thrust['PL']
             ),
             ctrl.Rule(
-                self.__ship_stopping_distance['PL'] & self.__closest_asteroid_distance['PL'] & (self.__closest_mine_distance['PM'] | self.__closest_mine_distance['PL']),
-                self.__ship_thrust['PM']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PM'] & self.__closest_asteroid_distance['Z'],
-                self.__ship_thrust['NL']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PM'] & self.__closest_asteroid_distance['PS'],
-                self.__ship_thrust['NL']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PM'] & self.__closest_asteroid_distance['PM'] & self.__closest_mine_distance['Z'] & self.__closest_mine_remaining_time['S'],
-                self.__ship_thrust['NL']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PM'] & self.__closest_asteroid_distance['PM'] & self.__closest_mine_distance['Z'] & self.__closest_mine_remaining_time['M'],
-                self.__ship_thrust['NL']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PM'] & self.__closest_asteroid_distance['PM'] & self.__closest_mine_distance['Z'] & self.__closest_mine_remaining_time['L'],
-                self.__ship_thrust['NM']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PM'] & self.__closest_asteroid_distance['PM'] & self.__closest_mine_distance['PS'] & self.__closest_mine_remaining_time['S'],
-                self.__ship_thrust['NM']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PM'] & self.__closest_asteroid_distance['PM'] & self.__closest_mine_distance['PS'] & self.__closest_mine_remaining_time['M'],
-                self.__ship_thrust['NS']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PM'] & self.__closest_asteroid_distance['PM'] & self.__closest_mine_distance['PS'] & self.__closest_mine_remaining_time['L'],
-                self.__ship_thrust['NS']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PM'] & self.__closest_asteroid_distance['PM'] & (self.__closest_mine_distance['PM'] | self.__closest_mine_distance['PL']),
-                self.__ship_thrust['NS']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PM'] & self.__closest_asteroid_distance['PL'] & self.__closest_mine_distance['Z'] & self.__closest_mine_remaining_time['S'],
-                self.__ship_thrust['PL']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PM'] & self.__closest_asteroid_distance['PL'] & self.__closest_mine_distance['Z'] & self.__closest_mine_remaining_time['M'],
-                self.__ship_thrust['PL']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PM'] & self.__closest_asteroid_distance['PL'] & self.__closest_mine_distance['Z'] & self.__closest_mine_remaining_time['L'],
-                self.__ship_thrust['PM']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PM'] & self.__closest_asteroid_distance['PL'] & self.__closest_mine_distance['PS'] & self.__closest_mine_remaining_time['S'],
-                self.__ship_thrust['PM']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PM'] & self.__closest_asteroid_distance['PL'] & self.__closest_mine_distance['PS'] & self.__closest_mine_remaining_time['M'],
-                self.__ship_thrust['PM']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PM'] & self.__closest_asteroid_distance['PL'] & self.__closest_mine_distance['PS'] & self.__closest_mine_remaining_time['L'],
+                (self.__closest_mine_remaining_time['L'] | self.__closest_mine_distance['out_of_range']) & self.__greatest_threat_asteroid_threat_time['M'] & (self.__target_ship_firing_heading_delta['NL'] | self.__target_ship_firing_heading_delta['PL']),
                 self.__ship_thrust['PS']
             ),
             ctrl.Rule(
-                self.__ship_stopping_distance['PM'] & self.__closest_asteroid_distance['PL'] & (self.__closest_mine_distance['PM'] | self.__closest_mine_distance['PL']),
-                self.__ship_thrust['PM']
+                (self.__closest_mine_remaining_time['L'] | self.__closest_mine_distance['out_of_range']) & self.__greatest_threat_asteroid_threat_time['M'] & (self.__target_ship_firing_heading_delta['NS'] | self.__target_ship_firing_heading_delta['Z'] | self.__target_ship_firing_heading_delta['PS']),
+                self.__ship_thrust['NS']
             ),
             ctrl.Rule(
-                self.__ship_stopping_distance['PS'] & self.__closest_asteroid_distance['Z'],
-                self.__ship_thrust['NL']
+                (self.__closest_mine_remaining_time['L'] | self.__closest_mine_distance['out_of_range']) & self.__greatest_threat_asteroid_threat_time['M'] & (self.__target_ship_firing_heading_delta['NM'] | self.__target_ship_firing_heading_delta['PM']) & (self.__ship_speed['NS'] | self.__ship_speed['Z'] | self.__ship_speed['PS'] | self.__ship_speed['PM'] | self.__ship_speed['PL']),
+                self.__ship_thrust['NS']
             ),
             ctrl.Rule(
-                self.__ship_stopping_distance['PS'] & self.__closest_asteroid_distance['PS'] & self.__closest_mine_distance['Z'] & self.__closest_mine_remaining_time['S'],
-                self.__ship_thrust['NL']
+                (self.__closest_mine_remaining_time['L'] | self.__closest_mine_distance['out_of_range']) & self.__greatest_threat_asteroid_threat_time['M'] & (self.__target_ship_firing_heading_delta['NM'] | self.__target_ship_firing_heading_delta['PM']) & (self.__ship_speed['NM'] | self.__ship_speed['NL']),
+                self.__ship_thrust['PS']
             ),
             ctrl.Rule(
-                self.__ship_stopping_distance['PS'] & self.__closest_asteroid_distance['PS'] & self.__closest_mine_distance['Z'] & self.__closest_mine_remaining_time['M'],
-                self.__ship_thrust['NL']
+                (self.__closest_mine_remaining_time['L'] | self.__closest_mine_distance['out_of_range']) & self.__greatest_threat_asteroid_threat_time['L'],
+                self.__ship_thrust['Z']
             ),
             ctrl.Rule(
-                self.__ship_stopping_distance['PS'] & self.__closest_asteroid_distance['PS'] & self.__closest_mine_distance['Z'] & self.__closest_mine_remaining_time['L'],
+                self.__closest_mine_distance['in_range'] & self.__closest_mine_remaining_time['M'],
                 self.__ship_thrust['NM']
             ),
             ctrl.Rule(
-                self.__ship_stopping_distance['PS'] & self.__closest_asteroid_distance['PS'] & self.__closest_mine_distance['PS'] & self.__closest_mine_remaining_time['S'],
+                self.__closest_mine_distance['in_range'] & self.__closest_mine_remaining_time['S'],
                 self.__ship_thrust['NL']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PS'] & self.__closest_asteroid_distance['PS'] & self.__closest_mine_distance['PS'] & self.__closest_mine_remaining_time['M'],
-                self.__ship_thrust['NM']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PS'] & self.__closest_asteroid_distance['PS'] & self.__closest_mine_distance['PS'] & self.__closest_mine_remaining_time['L'],
-                self.__ship_thrust['NM']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PS'] & self.__closest_asteroid_distance['PS'] & (self.__closest_mine_distance['PM'] | self.__closest_mine_distance['PL']),
-                self.__ship_thrust['NM']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PS'] & self.__closest_asteroid_distance['PM'] & self.__closest_mine_distance['Z'],
-                self.__ship_thrust['PL']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PS'] & self.__closest_asteroid_distance['PM'] & self.__closest_mine_distance['PS'],
-                self.__ship_thrust['PL']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PS'] & self.__closest_asteroid_distance['PM'] & (self.__closest_mine_distance['PM'] | self.__closest_mine_distance['PL']),
-                self.__ship_thrust['PM']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['PS'] & self.__closest_asteroid_distance['PL'],
-                self.__ship_thrust['PL']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['Z'] & self.__closest_asteroid_distance['Z'],
-                self.__ship_thrust['NL']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['Z'] & self.__closest_asteroid_distance['PS'],
-                self.__ship_thrust['NL']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['Z'] & self.__closest_asteroid_distance['PM'] & self.__closest_mine_distance['Z'] & self.__closest_mine_remaining_time['S'],
-                self.__ship_thrust['PL']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['Z'] & self.__closest_asteroid_distance['PM'] & self.__closest_mine_distance['Z'] & self.__closest_mine_remaining_time['M'],
-                self.__ship_thrust['PL']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['Z'] & self.__closest_asteroid_distance['PM'] & self.__closest_mine_distance['Z'] & self.__closest_mine_remaining_time['L'],
-                self.__ship_thrust['PM']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['Z'] & self.__closest_asteroid_distance['PM'] & self.__closest_mine_distance['PS'] & self.__closest_mine_remaining_time['S'],
-                self.__ship_thrust['PL']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['Z'] & self.__closest_asteroid_distance['PM'] & self.__closest_mine_distance['PS'] & self.__closest_mine_remaining_time['M'],
-                self.__ship_thrust['PL']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['Z'] & self.__closest_asteroid_distance['PM'] & self.__closest_mine_distance['PS'] & self.__closest_mine_remaining_time['L'],
-                self.__ship_thrust['PM']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['Z'] & self.__closest_asteroid_distance['PM'] & (self.__closest_mine_distance['PM'] | self.__closest_mine_distance['PL']),
-                self.__ship_thrust['PM']
-            ),
-            ctrl.Rule(
-                self.__ship_stopping_distance['Z'] & self.__closest_asteroid_distance['PL'],
-                self.__ship_thrust['PL']
             )
         ]
 
@@ -1136,10 +988,11 @@ class TeamCAMController(KesslerController):
         self.__ship_turn_simulation.input['target_ship_firing_heading_delta'] = target_ship_firing_heading_delta
         self.__drop_mine_simulation.input['greatest_threat_asteroid_threat_time'] = greatest_threat_asteroid_threat_time
         self.__drop_mine_simulation.input['ship_is_invincible'] = int(ship_is_respawning)
-        self.__ship_thrust_simulation.input['ship_stopping_distance'] = stopping_distance
+        self.__ship_thrust_simulation.input['greatest_threat_asteroid_threat_time'] = greatest_threat_asteroid_threat_time
+        self.__ship_thrust_simulation.input['ship_speed'] = ship_speed
         self.__ship_thrust_simulation.input['closest_mine_distance'] = closest_mine_distance
         self.__ship_thrust_simulation.input['closest_mine_remaining_time'] = closest_mine_remaining_time
-        self.__ship_thrust_simulation.input['closest_asteroid_distance'] = closest_asteroid_distance
+        self.__ship_thrust_simulation.input['target_ship_firing_heading_delta'] = target_ship_firing_heading_delta
 
         turn_rate: float
         try:
