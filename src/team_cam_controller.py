@@ -32,6 +32,7 @@ class TeamCAMController(KesslerController):
         self.__greatest_threat_asteroid_size: ctrl.Antecedent | None = None
         self.__ship_distance_from_nearest_edge: ctrl.Antecedent | None = None
         self.__target_ship_firing_heading_delta: ctrl.Antecedent | None = None
+        self.__ship_speed: ctrl.Antecedent | None = None
         self.__ship_stopping_distance: ctrl.Antecedent | None = None
         self.__closest_mine_distance: ctrl.Antecedent | None = None
         self.__closest_mine_remaining_time: ctrl.Antecedent | None = None
@@ -55,6 +56,7 @@ class TeamCAMController(KesslerController):
         self.__closest_asteroid_size_range: tuple[float, float] = (0, 4)
         self.__ship_distance_from_nearest_edge_range: tuple[float, float] = (0, 1) # gets set correctly on first iteration of game (once the map size is known)
         self.__target_ship_firing_heading_delta_range: tuple[float, float] = (-pi, pi) # Radians due to Python
+        self.__ship_speed_range: tuple[float, float] = (-240, 240) # m/s
         self.__ship_stopping_distance_range: tuple[float, float] = (0, 60) # m
         self.__closest_mine_distance_range: tuple[float, float] = (0, 1000) # m
         self.__closest_mine_remaining_time_range: tuple[float, float] = (0, 100)
@@ -195,6 +197,27 @@ class TeamCAMController(KesslerController):
             ship_thrust_gene,
             self.__ship_turn_range[0],
             self.__ship_turn_range[1]
+        )
+
+        start_gene_index = end_gene_index
+        genes_needed = 7
+        end_gene_index = start_gene_index + genes_needed
+        values: list[float] = chromosome_list[start_gene_index:end_gene_index]
+        values.extend([-0.01, 1.01])
+        values = sorted(values)
+        ship_speed_gene: Gene = { # type: ignore
+            "NL": tuple(values[0:3]),
+            "NM": tuple(values[1:4]),
+            "NS": tuple(values[2:5]),
+            "Z": tuple(values[3:6]),
+            "PS": tuple(values[4:7]),
+            "PM": tuple(values[5:8]),
+            "PL": tuple(values[6:9])
+        }
+        ship_speed_gene = self.__scale_gene(
+            ship_speed_gene,
+            self.__ship_speed_range[0],
+            self.__ship_speed_range[1]
         )
 
         start_gene_index = end_gene_index
@@ -358,6 +381,7 @@ class TeamCAMController(KesslerController):
         self.__converted_chromosome = {
             "ship_distance_from_nearest_edge": ship_distance_from_nearest_edge_gene,
             "target_ship_firing_heading_delta": target_ship_firing_heading_delta_gene,
+            "ship_speed": ship_speed_gene,
             "ship_stopping_distance": ship_stopping_distance_gene,
             "closest_mine_distance": closest_mine_distance_gene,
             "closest_asteroid_distance": closest_asteroid_distance_gene,
@@ -384,6 +408,7 @@ class TeamCAMController(KesslerController):
     def __setup_antecedents_and_consequents(self) -> None:
         self.__ship_distance_from_nearest_edge = ctrl.Antecedent(np.arange(self.__ship_distance_from_nearest_edge_range[0], self.__ship_distance_from_nearest_edge_range[1], 1), 'ship_distance_from_nearest_edge')
         self.__target_ship_firing_heading_delta = ctrl.Antecedent(np.arange(self.__target_ship_firing_heading_delta_range[0], self.__target_ship_firing_heading_delta_range[1], 0.01), 'target_ship_firing_heading_delta')
+        self.__ship_speed = ctrl.Antecedent(np.arange(self.__ship_speed_range[0], self.__ship_speed_range[1], 5), 'ship_speed')
         self.__ship_stopping_distance = ctrl.Antecedent(np.arange(self.__ship_stopping_distance_range[0], self.__ship_stopping_distance_range[1], 1), 'ship_stopping_distance')
         self.__closest_mine_distance = ctrl.Antecedent(np.arange(self.__closest_mine_distance_range[0], self.__closest_mine_distance_range[1], 1), 'closest_mine_distance')
         self.__closest_mine_remaining_time = ctrl.Antecedent(np.arange(self.__closest_mine_remaining_time_range[0], self.__closest_mine_remaining_time_range[1], 0.1), 'closest_mine_remaining_time')
@@ -408,6 +433,7 @@ class TeamCAMController(KesslerController):
         assert (self.__greatest_threat_asteroid_size is not None)
         assert (self.__ship_distance_from_nearest_edge is not None)
         assert (self.__target_ship_firing_heading_delta is not None)
+        assert (self.__ship_speed is not None)
         assert (self.__ship_stopping_distance is not None)
         assert (self.__closest_mine_distance is not None)
         assert (self.__closest_mine_remaining_time is not None)
@@ -460,6 +486,15 @@ class TeamCAMController(KesslerController):
         self.__target_ship_firing_heading_delta['PS'] = fuzz.trimf(self.__target_ship_firing_heading_delta.universe, target_ship_firing_heading_delta_gene["PS"])
         self.__target_ship_firing_heading_delta['PM'] = fuzz.trimf(self.__target_ship_firing_heading_delta.universe, target_ship_firing_heading_delta_gene["PM"])
         self.__target_ship_firing_heading_delta['PL'] = fuzz.trimf(self.__target_ship_firing_heading_delta.universe, target_ship_firing_heading_delta_gene["PL"])
+
+        ship_speed_gene: Gene = self.__converted_chromosome["ship_speed"]
+        self.__ship_speed['NL'] = fuzz.trimf(self.__ship_speed.universe, ship_speed_gene["NL"])
+        self.__ship_speed['NM'] = fuzz.trimf(self.__ship_speed.universe, ship_speed_gene["NM"])
+        self.__ship_speed['NS'] = fuzz.trimf(self.__ship_speed.universe, ship_speed_gene["NS"])
+        self.__ship_speed['Z']  = fuzz.trimf(self.__ship_speed.universe, ship_speed_gene["Z"])
+        self.__ship_speed['PS'] = fuzz.trimf(self.__ship_speed.universe, ship_speed_gene["PS"])
+        self.__ship_speed['PM'] = fuzz.trimf(self.__ship_speed.universe, ship_speed_gene["PM"])
+        self.__ship_speed['PL'] = fuzz.trimf(self.__ship_speed.universe, ship_speed_gene["PL"])
 
         ship_stopping_distance_gene: Gene = self.__converted_chromosome["ship_stopping_distance"]
         self.__ship_stopping_distance['Z']  = fuzz.trimf(self.__ship_stopping_distance.universe, ship_stopping_distance_gene["Z"])
@@ -524,6 +559,7 @@ class TeamCAMController(KesslerController):
         assert (self.__greatest_threat_asteroid_size is not None)
         assert (self.__ship_distance_from_nearest_edge is not None)
         assert (self.__target_ship_firing_heading_delta is not None)
+        assert (self.__ship_speed is not None)
         assert (self.__ship_stopping_distance is not None)
         assert (self.__closest_mine_distance is not None)
         assert (self.__closest_mine_remaining_time is not None)
